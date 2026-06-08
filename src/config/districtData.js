@@ -235,6 +235,51 @@ export const districtConfig = {
     { id: 'g018', category: 'lawn', center: [0, 25], radius: 3 },
     { id: 'g019', category: 'lawn', center: [0, -25], radius: 3 },
   ],
+
+  stalls: [
+    { id: 's001', position: [-5, 2], rotation: 0, type: 'food', scale: 1.0 },
+    { id: 's002', position: [-2, 5], rotation: Math.PI / 2, type: 'snack', scale: 0.9 },
+    { id: 's003', position: [3, 5], rotation: Math.PI, type: 'retail', scale: 1.0 },
+    { id: 's004', position: [6, 2], rotation: -Math.PI / 2, type: 'food', scale: 1.1 },
+    { id: 's005', position: [-5, -2], rotation: Math.PI / 4, type: 'snack', scale: 0.85 },
+    { id: 's006', position: [-8, -6], rotation: 0, type: 'retail', scale: 1.0 },
+    { id: 's007', position: [15, 5], rotation: Math.PI / 2, type: 'food', scale: 1.0 },
+    { id: 's008', position: [18, 2], rotation: 0, type: 'snack', scale: 0.9 },
+    { id: 's009', position: [-18, 12], rotation: -Math.PI / 4, type: 'retail', scale: 1.0 },
+    { id: 's010', position: [-20, 8], rotation: Math.PI / 2, type: 'food', scale: 1.1 },
+    { id: 's011', position: [8, 8], rotation: Math.PI, type: 'snack', scale: 0.95 },
+    { id: 's012', position: [20, -6], rotation: 0, type: 'food', scale: 1.0 },
+  ],
+
+  vehicles: {
+    pedestrians: [
+      { id: 'p001', path: [[-3, 10], [0, 5], [3, 0], [5, -5]], speed: 0.8, color: 0x445566 },
+      { id: 'p002', path: [[10, -3], [5, 0], [0, 3], [-5, 5]], speed: 0.7, color: 0x884422 },
+      { id: 'p003', path: [[-10, -5], [-5, -2], [0, 2], [5, 8]], speed: 0.9, color: 0x336655 },
+      { id: 'p004', path: [[15, 0], [10, 3], [5, 5], [0, 8]], speed: 0.6, color: 0x663355 },
+      { id: 'p005', path: [[-20, 5], [-15, 2], [-10, 0], [-5, -2]], speed: 0.8, color: 0x554433 },
+      { id: 'p006', path: [[5, -15], [3, -10], [0, -5], [-3, 0]], speed: 0.7, color: 0x446688 },
+      { id: 'p007', path: [[-5, 20], [-3, 15], [0, 10], [2, 5]], speed: 0.85, color: 0x885544 },
+      { id: 'p008', path: [[20, 10], [15, 8], [10, 5], [5, 3]], speed: 0.75, color: 0x335566 },
+      { id: 'p009', path: [[-15, -10], [-10, -8], [-5, -5], [0, -2]], speed: 0.9, color: 0x668844 },
+      { id: 'p010', path: [[8, -8], [5, -5], [2, -2], [0, 0]], speed: 0.65, color: 0x553366 },
+      { id: 'p011', path: [[-8, 8], [-4, 5], [0, 3], [4, 0]], speed: 0.8, color: 0x448855 },
+      { id: 'p012', path: [[25, -5], [20, -2], [15, 0], [10, 3]], speed: 0.7, color: 0x774433 },
+      { id: 'p013', path: [[-25, 15], [-20, 12], [-15, 8], [-10, 5]], speed: 0.75, color: 0x336644 },
+      { id: 'p014', path: [[12, 18], [8, 15], [5, 12], [2, 8]], speed: 0.85, color: 0x556677 },
+      { id: 'p015', path: [[-3, -18], [-2, -12], [0, -8], [2, -3]], speed: 0.7, color: 0x886633 },
+    ],
+    cars: [
+      { id: 'c001', path: [[-50, 5], [-30, 3], [-10, 1], [10, -1], [30, -3], [50, -5]], speed: 1.2, color: 0xcc3333, type: 'sedan' },
+      { id: 'c002', path: [[50, -3], [30, -1], [10, 1], [-10, 3], [-30, 5], [-50, 7]], speed: 1.0, color: 0x3333cc, type: 'sedan' },
+      { id: 'c003', path: [[5, -50], [3, -30], [1, -10], [-1, 10], [-3, 30], [-5, 50]], speed: 1.3, color: 0x33cc33, type: 'suv' },
+      { id: 'c004', path: [[-3, 50], [-1, 30], [1, 10], [3, -10], [5, -30], [7, -50]], speed: 1.1, color: 0xcccc33, type: 'sedan' },
+      { id: 'c005', path: [[35, 35], [25, 25], [15, 15], [5, 5]], speed: 0.9, color: 0xffffff, type: 'van' },
+      { id: 'c006', path: [[-35, -35], [-25, -25], [-15, -15], [-5, -5]], speed: 1.0, color: 0x333333, type: 'sedan' },
+      { id: 'c007', path: [[-35, 35], [-25, 25], [-15, 15], [-5, 5]], speed: 1.1, color: 0xff8800, type: 'suv' },
+      { id: 'c008', path: [[35, -35], [25, -25], [15, -15], [5, -5]], speed: 0.8, color: 0x8800ff, type: 'van' },
+    ],
+  },
 }
 
 export const annotationData = [

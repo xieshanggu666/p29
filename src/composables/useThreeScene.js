@@ -32,7 +32,7 @@ export function useThreeScene() {
     modelBuilder.value = new DistrictModelBuilder(sceneManager.value.scene)
 
     sceneManager.value.addUpdateCallback((delta, elapsed) => {
-      if (modelBuilder.value) modelBuilder.value.updateAnimation(elapsed)
+      if (modelBuilder.value) modelBuilder.value.updateAnimation(delta, elapsed)
       if (annotationManager.value) annotationManager.value.updateAnimation(elapsed)
     })
 
