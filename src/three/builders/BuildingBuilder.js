@@ -74,7 +74,7 @@ export class BuildingBuilder {
     const body = new THREE.Mesh(bodyGeo, bodyMat.clone())
     body.castShadow = true
     body.receiveShadow = true
-    body.position.y = height / 2
+    body.position.y = 0
     body.userData = { interactive: true, buildingId: id, buildingName: name, buildingType: type, buildingInfo: info, floors }
     group.add(body)
 

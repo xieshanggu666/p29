@@ -28,8 +28,8 @@ export class SceneManager {
 
   _createScene() {
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x1a1a2e)
-    this.scene.fog = new THREE.FogExp2(0x1a1a2e, 0.008)
+    this.scene.background = new THREE.Color(0x87CEEB)
+    this.scene.fog = new THREE.Fog(0x87CEEB, 150, 500)
   }
 
   _createCamera() {
@@ -84,7 +84,7 @@ export class SceneManager {
     directionalLight.shadow.camera.bottom = -100
     this.scene.add(directionalLight)
 
-    const fillLight = new THREE.DirectionalLight(0x8888ff, 0.3)
+    const fillLight = new THREE.DirectionalLight(0xaabbff, 0.3)
     fillLight.position.set(-30, 40, -30)
     this.scene.add(fillLight)
 
@@ -123,7 +123,7 @@ export class SceneManager {
     groundGeo.computeVertexNormals()
 
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x2a2a3e,
+      color: 0x556b5a,
       roughness: 0.9,
       metalness: 0.1,
     })
@@ -133,7 +133,7 @@ export class SceneManager {
     ground.name = 'ground'
     this.scene.add(ground)
 
-    const gridHelper = new THREE.GridHelper(200, 40, 0x333355, 0x222244)
+    const gridHelper = new THREE.GridHelper(200, 40, 0x778877, 0x667766)
     gridHelper.position.y = 0.01
     this.scene.add(gridHelper)
   }
