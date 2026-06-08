@@ -27,7 +27,7 @@ export class VehicleBuilder {
     }
   }
 
-  createPedestrian({ id, path, speed = 1, color = 0x334455 }) {
+  createPedestrian({ id, path, speed = 1, color = 0x334455, closed = false }) {
     const group = new THREE.Group()
     group.name = `pedestrian_${id}`
     group.userData = {
@@ -80,7 +80,7 @@ export class VehicleBuilder {
 
     const curve = new THREE.CatmullRomCurve3(
       path.map(p => new THREE.Vector3(p[0], 0, p[1])),
-      false
+      closed
     )
 
     const pedData = {
@@ -89,6 +89,7 @@ export class VehicleBuilder {
       speed,
       progress: Math.random(),
       direction: 1,
+      closed,
       leftLeg,
       rightLeg,
       leftArm,
@@ -101,7 +102,7 @@ export class VehicleBuilder {
     return group
   }
 
-  createCar({ id, path, speed = 1.5, color = 0xcc3333, type = 'sedan' }) {
+  createCar({ id, path, speed = 1.5, color = 0xcc3333, type = 'sedan', closed = false }) {
     const group = new THREE.Group()
     group.name = `car_${id}`
     group.userData = {
@@ -142,7 +143,7 @@ export class VehicleBuilder {
 
     const curve = new THREE.CatmullRomCurve3(
       path.map(p => new THREE.Vector3(p[0], 0, p[1])),
-      false
+      closed
     )
 
     const carData = {
@@ -151,6 +152,7 @@ export class VehicleBuilder {
       speed,
       progress: Math.random(),
       direction: 1,
+      closed,
     }
 
     this.cars.push(carData)
@@ -165,17 +167,17 @@ export class VehicleBuilder {
     group.add(body)
 
     const cabin = new THREE.Mesh(this._carGeo.sedanCabin, glassMat)
-    cabin.position.y = 1.0
+    cabin.position.set(0, 1.0, 0.2)
     group.add(cabin)
 
     this._addWheels(group, wheelMat, 0.35, [
-      [-0.8, 0.35, 0.65],
-      [0.8, 0.35, 0.65],
-      [-0.8, 0.35, -0.65],
-      [0.8, 0.35, -0.65],
+      [-0.65, 0.35, 1.1],
+      [0.65, 0.35, 1.1],
+      [-0.65, 0.35, -1.1],
+      [0.65, 0.35, -1.1],
     ])
 
-    this._addLights(group, lightMat, tailLightMat, 0.55, 1.6)
+    this._addLights(group, lightMat, tailLightMat, 0.55, 1.5)
   }
 
   _buildSuv(group, bodyMat, glassMat, wheelMat, lightMat, tailLightMat) {
@@ -185,17 +187,17 @@ export class VehicleBuilder {
     group.add(body)
 
     const cabin = new THREE.Mesh(this._carGeo.suvCabin, glassMat)
-    cabin.position.y = 1.2
+    cabin.position.set(0, 1.2, 0)
     group.add(cabin)
 
     this._addWheels(group, wheelMat, 0.4, [
-      [-0.9, 0.4, 0.75],
-      [0.9, 0.4, 0.75],
-      [-0.9, 0.4, -0.75],
-      [0.9, 0.4, -0.75],
+      [-0.75, 0.4, 1.2],
+      [0.75, 0.4, 1.2],
+      [-0.75, 0.4, -1.2],
+      [0.75, 0.4, -1.2],
     ])
 
-    this._addLights(group, lightMat, tailLightMat, 0.7, 1.8)
+    this._addLights(group, lightMat, tailLightMat, 0.7, 1.7)
   }
 
   _buildVan(group, bodyMat, glassMat, wheelMat, lightMat, tailLightMat) {
@@ -205,17 +207,17 @@ export class VehicleBuilder {
     group.add(body)
 
     const cabin = new THREE.Mesh(this._carGeo.vanCabin, glassMat)
-    cabin.position.y = 1.45
+    cabin.position.set(0, 1.45, 1.2)
     group.add(cabin)
 
     this._addWheels(group, wheelMat, 0.4, [
-      [-1.0, 0.4, 0.8],
-      [1.0, 0.4, 0.8],
-      [-1.0, 0.4, -0.8],
-      [1.0, 0.4, -0.8],
+      [-0.8, 0.4, 1.4],
+      [0.8, 0.4, 1.4],
+      [-0.8, 0.4, -1.4],
+      [0.8, 0.4, -1.4],
     ])
 
-    this._addLights(group, lightMat, tailLightMat, 0.9, 2.0)
+    this._addLights(group, lightMat, tailLightMat, 0.9, 1.9)
   }
 
   _addWheels(group, wheelMat, radius, positions) {
@@ -223,29 +225,29 @@ export class VehicleBuilder {
     for (const pos of positions) {
       const wheel = new THREE.Mesh(wheelGeo, wheelMat)
       wheel.position.set(pos[0], pos[1], pos[2])
-      wheel.rotation.x = Math.PI / 2
+      wheel.rotation.z = Math.PI / 2
       wheel.castShadow = true
       group.add(wheel)
     }
   }
 
   _addLights(group, lightMat, tailLightMat, yPos, halfLength) {
-    const lightGeo = new THREE.BoxGeometry(0.1, 0.15, 0.3)
+    const lightGeo = new THREE.BoxGeometry(0.3, 0.15, 0.1)
     const frontLeft = new THREE.Mesh(lightGeo, lightMat)
-    frontLeft.position.set(-halfLength, yPos, 0.5)
+    frontLeft.position.set(-0.5, yPos, halfLength)
     group.add(frontLeft)
 
     const frontRight = new THREE.Mesh(lightGeo, lightMat)
-    frontRight.position.set(-halfLength, yPos, -0.5)
+    frontRight.position.set(0.5, yPos, halfLength)
     group.add(frontRight)
 
-    const tailGeo = new THREE.BoxGeometry(0.1, 0.12, 0.25)
+    const tailGeo = new THREE.BoxGeometry(0.25, 0.12, 0.1)
     const tailLeft = new THREE.Mesh(tailGeo, tailLightMat)
-    tailLeft.position.set(halfLength, yPos, 0.5)
+    tailLeft.position.set(-0.5, yPos, -halfLength)
     group.add(tailLeft)
 
     const tailRight = new THREE.Mesh(tailGeo, tailLightMat)
-    tailRight.position.set(halfLength, yPos, -0.5)
+    tailRight.position.set(0.5, yPos, -halfLength)
     group.add(tailRight)
   }
 
@@ -260,12 +262,12 @@ export class VehicleBuilder {
 
   _createCarGeometry() {
     return {
-      sedanBody: new THREE.BoxGeometry(3.2, 0.6, 1.4),
-      sedanCabin: new THREE.BoxGeometry(1.6, 0.5, 1.3),
-      suvBody: new THREE.BoxGeometry(3.6, 0.8, 1.6),
-      suvCabin: new THREE.BoxGeometry(2.0, 0.6, 1.5),
-      vanBody: new THREE.BoxGeometry(4.0, 1.0, 1.8),
-      vanCabin: new THREE.BoxGeometry(1.2, 0.6, 1.7),
+      sedanBody: new THREE.BoxGeometry(1.4, 0.6, 3.2),
+      sedanCabin: new THREE.BoxGeometry(1.3, 0.5, 1.6),
+      suvBody: new THREE.BoxGeometry(1.6, 0.8, 3.6),
+      suvCabin: new THREE.BoxGeometry(1.5, 0.6, 2.0),
+      vanBody: new THREE.BoxGeometry(1.8, 1.0, 4.0),
+      vanCabin: new THREE.BoxGeometry(1.7, 0.6, 1.2),
     }
   }
 
@@ -273,19 +275,25 @@ export class VehicleBuilder {
     for (const ped of this.pedestrians) {
       ped.progress += delta * ped.speed * 0.03 * ped.direction
 
-      if (ped.progress >= 1) {
-        ped.progress = 1
-        ped.direction = -1
-      } else if (ped.progress <= 0) {
-        ped.progress = 0
-        ped.direction = 1
+      if (ped.closed) {
+        if (ped.progress >= 1) ped.progress -= 1
+        if (ped.progress < 0) ped.progress += 1
+      } else {
+        if (ped.progress >= 1) {
+          ped.progress = 1
+          ped.direction = -1
+        } else if (ped.progress <= 0) {
+          ped.progress = 0
+          ped.direction = 1
+        }
       }
 
-      const point = ped.curve.getPointAt(Math.max(0.001, Math.min(0.999, ped.progress)))
-      const tangent = ped.curve.getTangentAt(Math.max(0.001, Math.min(0.999, ped.progress)))
+      const t = Math.max(0.001, Math.min(0.999, ped.progress))
+      const point = ped.curve.getPointAt(t)
+      const tangent = ped.curve.getTangentAt(t)
 
       ped.group.position.copy(point)
-      ped.group.position.y = 0
+      ped.group.position.y = 0.15
 
       const angle = Math.atan2(tangent.x, tangent.z)
       ped.group.rotation.y = ped.direction === 1 ? angle : angle + Math.PI
@@ -300,14 +308,19 @@ export class VehicleBuilder {
     }
 
     for (const car of this.cars) {
-      car.progress += delta * car.speed * 0.02 * car.direction
+      car.progress += delta * car.speed * 0.015 * car.direction
 
-      if (car.progress >= 1) {
-        car.progress = 1
-        car.direction = -1
-      } else if (car.progress <= 0) {
-        car.progress = 0
-        car.direction = 1
+      if (car.closed) {
+        if (car.progress >= 1) car.progress -= 1
+        if (car.progress < 0) car.progress += 1
+      } else {
+        if (car.progress >= 1) {
+          car.progress = 1
+          car.direction = -1
+        } else if (car.progress <= 0) {
+          car.progress = 0
+          car.direction = 1
+        }
       }
 
       const t = Math.max(0.001, Math.min(0.999, car.progress))
@@ -315,10 +328,29 @@ export class VehicleBuilder {
       const tangent = car.curve.getTangentAt(t)
 
       car.group.position.copy(point)
-      car.group.position.y = 0
+      car.group.position.y = 0.1
 
       const angle = Math.atan2(tangent.x, tangent.z)
-      car.group.rotation.y = car.direction === 1 ? angle : angle + Math.PI
+      car.group.rotation.y = angle
+    }
+
+    this._checkCarDistances()
+  }
+
+  _checkCarDistances() {
+    for (let i = 0; i < this.cars.length; i++) {
+      for (let j = i + 1; j < this.cars.length; j++) {
+        const posA = this.cars[i].group.position
+        const posB = this.cars[j].group.position
+        const dist = posA.distanceTo(posB)
+        if (dist < 4) {
+          this.cars[j].progress += 0.02 * this.cars[j].direction
+          if (this.cars[j].closed) {
+            if (this.cars[j].progress >= 1) this.cars[j].progress -= 1
+            if (this.cars[j].progress < 0) this.cars[j].progress += 1
+          }
+        }
+      }
     }
   }
 
