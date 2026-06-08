@@ -1,0 +1,267 @@
+export const districtConfig = {
+  name: '中心商业区',
+  buildings: [
+    {
+      id: 'b001',
+      name: '万达商业广场',
+      type: 'commercial',
+      position: [0, 0],
+      size: [16, 14],
+      floors: 12,
+      info: {
+        area: 52000,
+        occupancy: 0.92,
+        mainBusiness: '综合购物、餐饮、娱乐',
+        dailyFlow: 45000,
+        avgRent: 28,
+        developer: '万达集团',
+        openYear: 2018,
+      }
+    },
+    {
+      id: 'b002',
+      name: '金融中心大厦',
+      type: 'office',
+      position: [22, -10],
+      size: [12, 12],
+      floors: 25,
+      info: {
+        area: 78000,
+        occupancy: 0.88,
+        mainBusiness: '银行、证券、保险',
+        dailyFlow: 12000,
+        avgRent: 45,
+        developer: '中信集团',
+        openYear: 2020,
+      }
+    },
+    {
+      id: 'b003',
+      name: '星光天地购物中心',
+      type: 'retail',
+      position: [-20, 8],
+      size: [18, 12],
+      floors: 6,
+      info: {
+        area: 35000,
+        occupancy: 0.95,
+        mainBusiness: '品牌零售、精品百货',
+        dailyFlow: 32000,
+        avgRent: 35,
+        developer: '星光集团',
+        openYear: 2016,
+      }
+    },
+    {
+      id: 'b004',
+      name: '创智科技园',
+      type: 'office',
+      position: [30, 20],
+      size: [14, 10],
+      floors: 18,
+      info: {
+        area: 42000,
+        occupancy: 0.82,
+        mainBusiness: '科技企业孵化、研发中心',
+        dailyFlow: 8000,
+        avgRent: 38,
+        developer: '科创集团',
+        openYear: 2021,
+      }
+    },
+    {
+      id: 'b005',
+      name: '翡翠花园住宅区',
+      type: 'residential',
+      position: [-35, -15],
+      size: [20, 16],
+      floors: 8,
+      info: {
+        area: 65000,
+        occupancy: 0.96,
+        mainBusiness: '高端住宅、配套商业',
+        dailyFlow: 15000,
+        avgRent: 22,
+        developer: '万科集团',
+        openYear: 2019,
+      }
+    },
+    {
+      id: 'b006',
+      name: '国际商务中心',
+      type: 'commercial',
+      position: [-10, -30],
+      size: [14, 14],
+      floors: 20,
+      info: {
+        area: 58000,
+        occupancy: 0.90,
+        mainBusiness: '国际商务办公、会议中心',
+        dailyFlow: 10000,
+        avgRent: 52,
+        developer: '华润集团',
+        openYear: 2022,
+      }
+    },
+    {
+      id: 'b007',
+      name: '美食商业街',
+      type: 'retail',
+      position: [10, 25],
+      size: [24, 6],
+      floors: 3,
+      info: {
+        area: 18000,
+        occupancy: 0.98,
+        mainBusiness: '特色餐饮、小吃街',
+        dailyFlow: 28000,
+        avgRent: 30,
+        developer: '美食城集团',
+        openYear: 2017,
+      }
+    },
+    {
+      id: 'b008',
+      name: '湖畔酒店公寓',
+      type: 'residential',
+      position: [-25, 30],
+      size: [10, 10],
+      floors: 15,
+      info: {
+        area: 22000,
+        occupancy: 0.85,
+        mainBusiness: '高端酒店式公寓',
+        dailyFlow: 3000,
+        avgRent: 65,
+        developer: '洲际集团',
+        openYear: 2020,
+      }
+    },
+  ],
+
+  roads: [
+    {
+      id: 'r001',
+      name: '中央大道',
+      path: [[-80, 0], [-30, 0], [0, 5], [30, 2], [80, 0]],
+      width: 8,
+      type: 'main',
+    },
+    {
+      id: 'r002',
+      name: '商业街',
+      path: [[0, -60], [2, -20], [5, 0], [3, 30], [0, 70]],
+      width: 6,
+      type: 'main',
+    },
+    {
+      id: 'r003',
+      name: '金融路',
+      path: [[20, -50], [22, -10], [25, 20], [30, 50]],
+      width: 5,
+      type: 'secondary',
+    },
+    {
+      id: 'r004',
+      name: '花园巷',
+      path: [[-50, -15], [-35, -15], [-15, -12]],
+      width: 3,
+      type: 'secondary',
+    },
+    {
+      id: 'r005',
+      name: '滨湖路',
+      path: [[-40, 40], [-25, 35], [-10, 38], [10, 40], [30, 45]],
+      width: 4,
+      type: 'secondary',
+    },
+    {
+      id: 'r006',
+      name: '创新路',
+      path: [[30, -5], [30, 10], [30, 20], [32, 35]],
+      width: 4,
+      type: 'secondary',
+    },
+  ],
+
+  greenery: [
+    { id: 'g001', category: 'park', position: [-45, 25], size: [15, 12] },
+    { id: 'g002', category: 'lawn', center: [15, -20], radius: 6 },
+    { id: 'g003', category: 'lawn', center: [-15, 15], radius: 4 },
+    { id: 'g004', category: 'tree', position: [-12, -5], scale: 1.2, type: 'deciduous' },
+    { id: 'g005', category: 'tree', position: [-8, -8], scale: 0.9, type: 'coniferous' },
+    { id: 'g006', category: 'tree', position: [8, 15], scale: 1.0, type: 'deciduous' },
+    { id: 'g007', category: 'tree', position: [15, 18], scale: 1.1, type: 'deciduous' },
+    { id: 'g008', category: 'tree', position: [-5, 20], scale: 0.8, type: 'coniferous' },
+    { id: 'g009', category: 'tree', position: [25, 12], scale: 1.0, type: 'deciduous' },
+    { id: 'g010', category: 'tree', position: [-30, 10], scale: 1.3, type: 'deciduous' },
+    { id: 'g011', category: 'tree', position: [35, -5], scale: 0.9, type: 'coniferous' },
+    { id: 'g012', category: 'tree', position: [-18, -20], scale: 1.0, type: 'deciduous' },
+    { id: 'g013', category: 'tree', position: [5, -15], scale: 0.7, type: 'coniferous' },
+    { id: 'g014', category: 'tree', position: [-40, 5], scale: 1.1, type: 'deciduous' },
+    { id: 'g015', category: 'lawn', center: [40, 30], radius: 5 },
+  ],
+}
+
+export const annotationData = [
+  {
+    id: 'ann001',
+    targetId: 'b001',
+    position: { x: 0, y: 36, z: 0 },
+    title: '万达商业广场',
+    content: '区域核心商业综合体，日均客流4.5万人次',
+    color: 0xff6644,
+  },
+  {
+    id: 'ann002',
+    targetId: 'b002',
+    position: { x: 22, y: 75, z: -10 },
+    title: '金融中心大厦',
+    content: '甲级写字楼，入驻率88%，平均租金45元/㎡/天',
+    color: 0x4488ff,
+  },
+  {
+    id: 'ann003',
+    targetId: 'b003',
+    position: { x: -20, y: 18, z: 8 },
+    title: '星光天地购物中心',
+    content: '精品零售为主，入驻率95%，日均客流3.2万人次',
+    color: 0xffaa22,
+  },
+  {
+    id: 'ann004',
+    targetId: 'b007',
+    position: { x: 10, y: 9, z: 25 },
+    title: '美食商业街',
+    content: '特色餐饮聚集地，入驻率98%，日均客流2.8万人次',
+    color: 0xff4488,
+  },
+]
+
+export const scenePresets = {
+  overview: {
+    name: '总览视角',
+    position: [80, 60, 80],
+    target: [0, 0, 0],
+  },
+  commercial: {
+    name: '商业中心',
+    position: [10, 25, 25],
+    target: [0, 10, 0],
+  },
+  office: {
+    name: '办公区域',
+    position: [45, 30, -10],
+    target: [25, 30, 0],
+  },
+  residential: {
+    name: '住宅区域',
+    position: [-55, 20, -15],
+    target: [-35, 10, -15],
+  },
+  dining: {
+    name: '美食街区',
+    position: [20, 15, 40],
+    target: [10, 5, 25],
+  },
+}
