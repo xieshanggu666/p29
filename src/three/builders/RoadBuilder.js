@@ -14,9 +14,10 @@ export class RoadBuilder {
     }
   }
 
-  createRoad({ id, name, path, width = 4, type = 'main' }) {
+  createRoad({ id, name, path, width = 4, type = 'main', closed = false }) {
     const curve = new THREE.CatmullRomCurve3(
-      path.map(p => new THREE.Vector3(p[0], 0.05, p[1]))
+      path.map(p => new THREE.Vector3(p[0], 0.05, p[1])),
+      closed
     )
 
     const roadMat = new THREE.MeshStandardMaterial({
