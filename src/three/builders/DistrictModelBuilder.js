@@ -3,6 +3,7 @@ import { RoadBuilder } from './RoadBuilder.js'
 import { GreeneryBuilder } from './GreeneryBuilder.js'
 import { StallBuilder } from './StallBuilder.js'
 import { VehicleBuilder } from './VehicleBuilder.js'
+import { LandscapeBuilder } from './LandscapeBuilder.js'
 
 export class DistrictModelBuilder {
   constructor(scene) {
@@ -12,6 +13,7 @@ export class DistrictModelBuilder {
     this.greeneryBuilder = new GreeneryBuilder(scene)
     this.stallBuilder = new StallBuilder(scene)
     this.vehicleBuilder = new VehicleBuilder(scene)
+    this.landscapeBuilder = new LandscapeBuilder(scene)
   }
 
   buildDistrict(config) {
@@ -29,6 +31,9 @@ export class DistrictModelBuilder {
     }
     if (config.vehicles) {
       this.vehicleBuilder.buildFromConfig(config.vehicles)
+    }
+    if (config.landscape) {
+      this.landscapeBuilder.buildFromConfig(config.landscape)
     }
   }
 
@@ -52,10 +57,15 @@ export class DistrictModelBuilder {
     return this.vehicleBuilder
   }
 
+  getLandscapeBuilder() {
+    return this.landscapeBuilder
+  }
+
   updateAnimation(delta, elapsed) {
     this.greeneryBuilder.updateAnimation(elapsed)
     this.stallBuilder.updateAnimation(elapsed)
     this.vehicleBuilder.updateAnimation(delta, elapsed)
+    this.landscapeBuilder.updateAnimation(elapsed)
   }
 
   dispose() {
@@ -64,5 +74,6 @@ export class DistrictModelBuilder {
     this.greeneryBuilder.dispose()
     this.stallBuilder.dispose()
     this.vehicleBuilder.dispose()
+    this.landscapeBuilder.dispose()
   }
 }

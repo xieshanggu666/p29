@@ -214,6 +214,67 @@ export const districtConfig = {
     },
   ],
 
+  landscape: {
+    lake: {
+      id: 'ls001',
+      center: [-46, -40],
+      radii: [16, 12],
+      depth: 3.5,
+      depths: [
+        { offset: [0, 0], radius: 6, depth: 3.5 },
+        { offset: [4, -3], radius: 4, depth: 2.0 },
+        { offset: [-5, 2], radius: 5, depth: 1.2 },
+        { offset: [8, 5], radius: 3, depth: 0.5 },
+      ],
+      waterColor: 0x1a7b9a,
+      shoreColor: 0x8b7d5e,
+      circulation: {
+        inlet: [-54, -40],
+        outlet: [-38, -40],
+        flowPath: [
+          [-54, -40], [-50, -44], [-46, -48], [-40, -50],
+          [-36, -46], [-36, -38], [-38, -34], [-42, -32],
+          [-48, -32], [-52, -36], [-54, -40],
+        ],
+      },
+    },
+    bridge: {
+      id: 'ls002',
+      startPoint: [-58, -34],
+      endPoint: [-38, -48],
+      width: 2.5,
+      railingHeight: 1.0,
+      woodColor: 0x8B6914,
+      supportColor: 0x5a4a2a,
+    },
+    swimmingArea: {
+      id: 'ls003',
+      center: [-42, -50],
+      size: [10, 8],
+      orientation: Math.PI / 8,
+      depths: [
+        { position: [-3, -2], depth: 0.5 },
+        { position: [0, 0], depth: 1.2 },
+        { position: [3, 2], depth: 2.0 },
+      ],
+      safety: {
+        equipmentPositions: [
+          { pos: [-6, -5], type: 'lifebuoy' },
+          { pos: [6, -5], type: 'lifebuoy' },
+          { pos: [-6, 5], type: 'lifebuoy' },
+          { pos: [6, 5], type: 'lifeguardChair' },
+        ],
+        warningSigns: {
+          positions: [
+            { pos: [-7, -6], warning: 'depth' },
+            { pos: [7, 6], warning: 'noDiving' },
+            { pos: [7, -6], warning: 'depth' },
+          ],
+        },
+      },
+    },
+  },
+
   greenery: [
     { id: 'g001', category: 'park', position: [-38, 30], size: [12, 10] },
     { id: 'g002', category: 'park', position: [38, -30], size: [10, 10] },
