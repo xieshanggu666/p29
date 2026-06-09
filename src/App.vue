@@ -8,6 +8,7 @@
       @reset-camera="handleResetCamera"
       @toggle-annotations="handleToggleAnnotations"
       @toggle-wireframe="handleToggleWireframe"
+      @change-weather="handleChangeWeather"
     />
 
     <InfoPanel
@@ -59,6 +60,7 @@ const {
   toggleAnnotations,
   toggleWireframe,
   resetCamera,
+  changeWeather,
   dispose,
 } = useThreeScene()
 
@@ -79,6 +81,7 @@ function handleDeleteViewpoint(name) { deleteViewpoint(name) }
 function handleResetCamera() { resetCamera() }
 function handleToggleAnnotations() { toggleAnnotations() }
 function handleToggleWireframe() { toggleWireframe() }
+function handleChangeWeather(weather) { changeWeather(weather) }
 </script>
 
 <style>

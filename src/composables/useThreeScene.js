@@ -5,6 +5,7 @@ import { InteractionManager } from '../three/managers/InteractionManager.js'
 import { ViewpointManager } from '../three/managers/ViewpointManager.js'
 import { AnnotationManager } from '../three/managers/AnnotationManager.js'
 import { PerformanceManager } from '../three/managers/PerformanceManager.js'
+import { WeatherManager } from '../three/managers/WeatherManager.js'
 import { DistrictModelBuilder } from '../three/builders/DistrictModelBuilder.js'
 import { districtConfig, annotationData, scenePresets } from '../config/districtData.js'
 import { useSceneStore } from '../store/sceneStore.js'
@@ -17,6 +18,7 @@ export function useThreeScene() {
   const viewpointManager = shallowRef(null)
   const annotationManager = shallowRef(null)
   const performanceManager = shallowRef(null)
+  const weatherManager = shallowRef(null)
   const modelBuilder = shallowRef(null)
 
   const sceneStore = useSceneStore()
@@ -31,9 +33,12 @@ export function useThreeScene() {
 
     modelBuilder.value = new DistrictModelBuilder(sceneManager.value.scene)
 
+    weatherManager.value = new WeatherManager(sceneManager.value.scene)
+
     sceneManager.value.addUpdateCallback((delta, elapsed) => {
       if (modelBuilder.value) modelBuilder.value.updateAnimation(delta, elapsed)
       if (annotationManager.value) annotationManager.value.updateAnimation(elapsed)
+      if (weatherManager.value) weatherManager.value.update(delta, elapsed)
     })
 
     interactionManager.value = new InteractionManager(sceneManager.value, (obj, point) => {
@@ -173,6 +178,12 @@ export function useThreeScene() {
     animate()
   }
 
+  function changeWeather(weatherType) {
+    if (!weatherManager.value) return
+    weatherManager.value.setWeather(weatherType)
+    sceneStore.setCurrentWeather(weatherType)
+  }
+
   function startPerfMonitor() {
     perfTimer = setInterval(() => {
       if (!performanceManager.value) return
@@ -193,6 +204,7 @@ export function useThreeScene() {
     if (annotationManager.value) annotationManager.value.dispose()
     if (viewpointManager.value) viewpointManager.value.dispose()
     if (performanceManager.value) performanceManager.value.dispose()
+    if (weatherManager.value) weatherManager.value.dispose()
     if (modelBuilder.value) modelBuilder.value.dispose()
     if (sceneManager.value) sceneManager.value.dispose()
   }
@@ -208,6 +220,7 @@ export function useThreeScene() {
     toggleAnnotations,
     toggleWireframe,
     resetCamera,
+    changeWeather,
     dispose,
   }
 }

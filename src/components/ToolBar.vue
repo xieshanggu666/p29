@@ -44,6 +44,10 @@
     </div>
 
     <div class="toolbar-group">
+      <WeatherSelector @change-weather="$emit('change-weather', $event)" />
+    </div>
+
+    <div class="toolbar-group">
       <div class="save-viewpoint">
         <input
           v-model="viewpointName"
@@ -63,6 +67,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useSceneStore } from '../store/sceneStore.js'
+import WeatherSelector from './WeatherSelector.vue'
 
 const sceneStore = useSceneStore()
 const viewpointName = ref('')
@@ -73,6 +78,7 @@ const emit = defineEmits([
   'reset-camera',
   'toggle-annotations',
   'toggle-wireframe',
+  'change-weather',
 ])
 
 function handleSave() {

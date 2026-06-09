@@ -30,6 +30,22 @@ export class SceneManager {
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0x7EC8E3)
     this.scene.fog = new THREE.FogExp2(0x7EC8E3, 0.003)
+    
+    this.originalBackground = 0x7EC8E3
+    this.originalFogDensity = 0.003
+  }
+  
+  setBackground(color) {
+    if (this.scene.background instanceof THREE.Color) {
+      this.scene.background.setHex(color)
+    }
+  }
+  
+  setFog(density, color) {
+    if (this.scene.fog) {
+      this.scene.fog.density = density
+      this.scene.fog.color.setHex(color)
+    }
   }
 
   _createCamera() {
