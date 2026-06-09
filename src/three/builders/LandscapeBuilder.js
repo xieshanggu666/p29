@@ -201,13 +201,20 @@ export class LandscapeBuilder {
 
     const mat = new THREE.MeshPhysicalMaterial({
       color: waterColor || 0x1a6b8a,
-      roughness: 0.1,
-      metalness: 0.2,
-      transmission: 0.3,
+      roughness: 0.02,
+      metalness: 0.1,
+      transmission: 0.5,
       transparent: true,
-      opacity: 0.85,
-      envMapIntensity: 1.5,
+      opacity: 0.8,
+      envMapIntensity: 2.5,
+      ior: 1.33,
+      thickness: 0.5,
+      clearcoat: 0.8,
+      clearcoatRoughness: 0.05,
+      reflectivity: 0.8,
       side: THREE.DoubleSide,
+      specularIntensity: 1.0,
+      specularColor: new THREE.Color(0xffffff),
     })
 
     const mesh = new THREE.Mesh(geo, mat)

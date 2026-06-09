@@ -28,8 +28,8 @@ export class SceneManager {
 
   _createScene() {
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x87CEEB)
-    this.scene.fog = new THREE.Fog(0x87CEEB, 150, 500)
+    this.scene.background = new THREE.Color(0x7EC8E3)
+    this.scene.fog = new THREE.FogExp2(0x7EC8E3, 0.003)
   }
 
   _createCamera() {
@@ -50,7 +50,8 @@ export class SceneManager {
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.2
+    this.renderer.toneMappingExposure = 1.4
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.container.appendChild(this.renderer.domElement)
   }
 
@@ -68,27 +69,33 @@ export class SceneManager {
   }
 
   _createLights() {
-    const ambientLight = new THREE.AmbientLight(0x404060, 0.6)
+    const ambientLight = new THREE.AmbientLight(0x404060, 0.8)
     this.scene.add(ambientLight)
 
-    const directionalLight = new THREE.DirectionalLight(0xffeedd, 1.2)
+    const directionalLight = new THREE.DirectionalLight(0xffeedd, 1.8)
     directionalLight.position.set(50, 80, 30)
     directionalLight.castShadow = true
-    directionalLight.shadow.mapSize.width = 2048
-    directionalLight.shadow.mapSize.height = 2048
+    directionalLight.shadow.mapSize.width = 4096
+    directionalLight.shadow.mapSize.height = 4096
     directionalLight.shadow.camera.near = 0.5
-    directionalLight.shadow.camera.far = 300
-    directionalLight.shadow.camera.left = -100
-    directionalLight.shadow.camera.right = 100
-    directionalLight.shadow.camera.top = 100
-    directionalLight.shadow.camera.bottom = -100
+    directionalLight.shadow.camera.far = 400
+    directionalLight.shadow.camera.left = -120
+    directionalLight.shadow.camera.right = 120
+    directionalLight.shadow.camera.top = 120
+    directionalLight.shadow.camera.bottom = -120
+    directionalLight.shadow.bias = -0.0005
+    directionalLight.shadow.normalBias = 0.02
     this.scene.add(directionalLight)
 
-    const fillLight = new THREE.DirectionalLight(0xaabbff, 0.3)
+    const fillLight = new THREE.DirectionalLight(0xaabbff, 0.4)
     fillLight.position.set(-30, 40, -30)
     this.scene.add(fillLight)
 
-    const hemisphereLight = new THREE.HemisphereLight(0x88bbff, 0x443322, 0.4)
+    const backLight = new THREE.DirectionalLight(0xffeedd, 0.3)
+    backLight.position.set(-50, 30, 60)
+    this.scene.add(backLight)
+
+    const hemisphereLight = new THREE.HemisphereLight(0x88bbff, 0x443322, 0.5)
     this.scene.add(hemisphereLight)
   }
 
@@ -124,8 +131,8 @@ export class SceneManager {
 
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x556b5a,
-      roughness: 0.9,
-      metalness: 0.1,
+      roughness: 0.85,
+      metalness: 0.05,
     })
 
     const ground = new THREE.Mesh(groundGeo, groundMat)

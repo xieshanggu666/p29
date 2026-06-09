@@ -341,6 +341,67 @@ export const districtConfig = {
       { id: 'c008', path: [[-24, -24], [-38, -38]], speed: 0.8, color: 0x8800ff, type: 'van' },
     ],
   },
+
+  animals: {
+    birds: [
+      {
+        id: 'bird001',
+        path: [[-50, -50], [-20, -60], [20, -50], [50, -40], [60, -10], [40, 20], [10, 30], [-20, 20], [-50, 10], [-60, -20]],
+        speed: 0.8,
+        count: 5,
+        flyHeight: 35,
+        color: 0x1a1a2e,
+        closed: true,
+      },
+      {
+        id: 'bird002',
+        path: [[30, 50], [50, 30], [40, 0], [20, -20], [-10, -30], [-30, -10], [-20, 20], [0, 40]],
+        speed: 0.6,
+        count: 3,
+        flyHeight: 42,
+        color: 0x444455,
+        closed: true,
+      },
+      {
+        id: 'bird003',
+        path: [[-70, -40], [-50, -60], [-30, -70], [-10, -60], [-20, -40], [-50, -30]],
+        speed: 0.7,
+        count: 4,
+        flyHeight: 28,
+        color: 0x553322,
+        closed: true,
+      },
+    ],
+    fishSchools: [
+      {
+        id: 'fish001',
+        center: [-70, -68],
+        radii: [10, 7],
+        count: 8,
+        color: 0xcc6633,
+        speed: 0.8,
+        waterY: 0.05,
+      },
+      {
+        id: 'fish002',
+        center: [-70, -68],
+        radii: [7, 5],
+        count: 5,
+        color: 0x33aa66,
+        speed: 0.6,
+        waterY: -0.2,
+      },
+      {
+        id: 'fish003',
+        center: [-66, -80],
+        radii: [4, 3],
+        count: 4,
+        color: 0xddaa22,
+        speed: 1.0,
+        waterY: -0.15,
+      },
+    ],
+  },
 }
 
 export const annotationData = [

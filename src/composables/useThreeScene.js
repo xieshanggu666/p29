@@ -39,8 +39,8 @@ export function useThreeScene() {
     interactionManager.value = new InteractionManager(sceneManager.value, (obj, point) => {
       if (obj) {
         sceneStore.setSelectedObject({
-          id: obj.userData.buildingId || obj.userData.roadId || obj.userData.greeneryId || obj.userData.annotationId,
-          name: obj.userData.buildingName || obj.userData.roadName || obj.userData.annotationData?.title || '',
+          id: obj.userData.buildingId || obj.userData.roadId || obj.userData.greeneryId || obj.userData.annotationId || obj.userData.animalId,
+          name: obj.userData.buildingName || obj.userData.roadName || obj.userData.annotationData?.title || (obj.userData.category === 'bird' ? '飞鸟' : obj.userData.category === 'fish' ? '游鱼' : ''),
           type: obj.userData.buildingType || obj.userData.roadType || obj.userData.category || '',
           info: obj.userData.buildingInfo || obj.userData.annotationData || {},
           point: point ? { x: point.x, y: point.y, z: point.z } : null,

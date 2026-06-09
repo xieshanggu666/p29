@@ -1,0 +1,146 @@
+# 29商圈模型 - 项目功能说明
+
+## 项目概述
+基于 Vue 3 + Three.js 的3D商业区可视化模型，展示商业区建筑、道路、绿化、景观、动物等完整生态场景。
+
+## 技术栈
+- Vue 3 + Composition API
+- Three.js (3D渲染引擎)
+- Pinia (状态管理)
+- Vite (构建工具)
+- Vitest (测试框架)
+
+## 核心架构
+
+### 场景管理 (SceneManager)
+- Three.js 场景初始化与渲染循环
+- 相机控制（OrbitControls）
+- 光照系统（环境光、方向光、补光、半球光、背光）
+- 阴影映射（PCFSoftShadowMap, 4096分辨率）
+- ACES Filmic 色调映射，sRGB 色彩空间输出
+- 雾效（FogExp2）
+
+### 模型构建器体系 (Builders)
+- **BuildingBuilder** - 建筑模型构建
+  - 多类型建筑：商业、办公、住宅、零售
+  - MeshPhysicalMaterial 材质（clearcoat、envMapIntensity）
+  - 窗户细节（窗框 + 窗户发光面板）
+  - 玻璃幕墙（transmission、ior、reflectivity）
+  - 建筑装饰线条（角柱、水平装饰带）
+  - 住宅阳台
+  - 屋顶细节（天线、航空灯、空调设备）
+  - 屋顶灯闪烁动画
+
+- **RoadBuilder** - 道路系统构建
+  - 主干道/次干道
+  - 道路标线（虚线、边线）
+  - 人行道
+
+- **GreeneryBuilder** - 绿化系统构建
+  - 落叶树（树干+树枝+多层树冠）
+  - 针叶树（树干+多层锥形树冠）
+  - 公园绿地
+  - 草坪
+  - 树木微风摇摆动画
+
+- **LandscapeBuilder** - 景观系统构建
+  - 湖泊（湖床+水面+湖岸+生态区）
+  - 水面波浪动画
+  - 水体物理材质（ior=1.33, clearcoat, reflectivity）
+  - 芦苇丛、荷叶
+  - 桥梁（拱形桥面+栏杆+支撑）
+  - 游泳区（边界浮标+深度标记+安全设备+警告标志）
+  - 水循环系统（入口/出口标记+流动粒子）
+
+- **StallBuilder** - 摊位系统构建
+  - 食品摊、零食摊、零售摊
+  - 摊位顶棚、柜台、商品细节
+
+- **VehicleBuilder** - 交通系统构建
+  - 行人（身体+头部+四肢，行走动画）
+  - 车辆（轿车/SUV/面包车，沿路径行驶）
+  - 车距避让逻辑
+
+- **AnimalBuilder** - 动物系统构建
+  - 飞鸟：鸟群沿曲线路径飞行，翅膀拍打动画，滑翔行为切换
+  - 游鱼：鱼群在湖泊区域环形游动，尾巴摆动，胸鳍摆动，身体微倾
+  - 鱼类细节模型（身体+腹部+尾鳍+背鳍+胸鳍+眼睛）
+  - 鸟类细节模型（身体+头部+喙+翅膀+尾羽）
+  - 交互支持（点击选中动物）
+
+### 管理器 (Managers)
+- **InteractionManager** - 交互管理（射线拾取、高亮选中、悬停反馈）
+- **ViewpointManager** - 视角管理（保存/恢复/删除自定义视角）
+- **AnnotationManager** - 标注管理（场景内3D标注）
+- **PerformanceManager** - 性能管理（FPS监控、LOD自动调节）
+
+### 状态管理 (Stores)
+- **sceneStore** - 场景状态（加载、选中对象、FPS、线框模式等）
+- **viewpointStore** - 视角状态
+
+### 配置数据 (districtData.js)
+- 建筑配置（8栋不同类型建筑）
+- 道路配置（外环+内环+连接路）
+- 景观配置（湖泊+桥梁+游泳区）
+- 绿化配置（公园+草坪+树木）
+- 摊位配置（12个摊位）
+- 交通配置（15个行人+8辆车）
+- 动物配置（3群飞鸟+3群游鱼）
+
+---
+
+## 修改记录
+
+### 2026-06-09 动物元素添加 & 模型优化
+1. **新增 AnimalBuilder** - 动物系统构建器
+   - 实现飞鸟：多只鸟组成的鸟群沿CatmullRomCurve3路径飞行，包含翅膀拍打/滑翔切换动画，鸟身轻微上下浮动模拟自然飞行
+   - 实现游鱼：鱼群在湖面/游泳区下方环形游动，尾鳍摆动、胸鳍摆动、身体微倾模拟真实游姿，随机变换游动半径和方向
+   - 鸟类模型含锥体身体+球体头部+锥体喙+Shape翅膀+Shape尾羽
+   - 鱼类模型含变形球体身体+腹部+Shape尾鳍+Shape背鳍+Shape胸鳍+球体眼睛
+   - 点击交互支持（可选中飞鸟/游鱼）
+
+2. **DistrictModelBuilder 集成 AnimalBuilder**
+   - 添加 animalBuilder 实例
+   - buildDistrict 支持 animals 配置
+   - updateAnimation 调用动物动画更新
+   - dispose 调用动物资源释放
+
+3. **districtData.js 添加动物配置**
+   - 3群飞鸟（不同飞行路径、高度、颜色、数量）
+   - 3群游鱼（对应湖泊和游泳区位置，不同颜色和数量）
+
+4. **BuildingBuilder 全面优化**
+   - 材质升级：MeshStandardMaterial → MeshPhysicalMaterial，增加clearcoat、envMapIntensity
+   - 玻璃材质增强：提高transmission、添加ior/thickness/reflectivity/clearcoat
+   - 新增窗户细节系统：四面墙壁窗户（窗框+窗户发光面板），根据建筑类型调整大小
+   - 新增建筑装饰线条：角柱、水平装饰带
+   - 新增住宅阳台系统
+   - 新增屋顶细节：天线、航空警示灯（闪烁动画）、空调外机
+   - 新增 updateAnimation 方法
+
+5. **GreeneryBuilder 优化**
+   - 落叶树增加树枝细节
+   - 树冠由单球体改为多层球体组合，更自然
+   - 针叶树由单锥体改为4层锥体叠加，更立体
+   - 所有树部件增加 receiveShadow
+
+6. **LandscapeBuilder 水体优化**
+   - 水面材质升级：roughness降至0.02，添加ior=1.33（真实水折射率）
+   - 增加clearcoat、reflectivity、specularIntensity
+   - envMapIntensity从1.5提升至2.5
+
+7. **SceneManager 场景优化**
+   - 背景色优化
+   - 雾效从线性雾改为指数雾（FogExp2），过渡更自然
+   - 色调映射曝光度从1.2提升至1.4
+   - 新增 sRGB 色彩空间输出
+   - 主方向光强度从1.2提升至1.8
+   - 阴影贴图从2048提升至4096，扩大阴影范围
+   - 添加阴影偏移和法线偏移减少阴影瑕疵
+   - 新增背光（backLight）增强立体感
+   - 半球光和补光强度提升
+   - 地面材质优化
+
+8. **useThreeScene.js 交互优化**
+   - 选中对象支持动物ID识别
+   - 动物类别名称显示（飞鸟/游鱼）

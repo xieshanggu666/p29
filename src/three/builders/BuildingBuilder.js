@@ -11,39 +11,73 @@ export class BuildingBuilder {
 
   _createMaterials() {
     return {
-      commercial: new THREE.MeshStandardMaterial({
+      commercial: new THREE.MeshPhysicalMaterial({
         color: 0x4488cc,
-        roughness: 0.3,
-        metalness: 0.7,
+        roughness: 0.25,
+        metalness: 0.8,
+        clearcoat: 0.3,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 1.5,
       }),
-      office: new THREE.MeshStandardMaterial({
+      office: new THREE.MeshPhysicalMaterial({
         color: 0x6699bb,
-        roughness: 0.5,
-        metalness: 0.5,
+        roughness: 0.35,
+        metalness: 0.6,
+        clearcoat: 0.2,
+        clearcoatRoughness: 0.3,
+        envMapIntensity: 1.3,
       }),
-      residential: new THREE.MeshStandardMaterial({
+      residential: new THREE.MeshPhysicalMaterial({
         color: 0xddaa77,
-        roughness: 0.7,
-        metalness: 0.2,
+        roughness: 0.65,
+        metalness: 0.15,
+        clearcoat: 0.1,
+        clearcoatRoughness: 0.4,
       }),
-      retail: new THREE.MeshStandardMaterial({
+      retail: new THREE.MeshPhysicalMaterial({
         color: 0xcc6644,
-        roughness: 0.4,
-        metalness: 0.4,
+        roughness: 0.3,
+        metalness: 0.5,
+        clearcoat: 0.25,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 1.4,
       }),
       glass: new THREE.MeshPhysicalMaterial({
-        color: 0x88ccff,
-        roughness: 0.05,
-        metalness: 0.1,
-        transmission: 0.6,
+        color: 0x99ccff,
+        roughness: 0.02,
+        metalness: 0.05,
+        transmission: 0.75,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.5,
+        ior: 1.5,
+        thickness: 0.1,
+        envMapIntensity: 2.0,
+        reflectivity: 0.9,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.05,
       }),
       roof: new THREE.MeshStandardMaterial({
         color: 0x334455,
-        roughness: 0.8,
-        metalness: 0.3,
-      })
+        roughness: 0.75,
+        metalness: 0.35,
+      }),
+      windowFrame: new THREE.MeshStandardMaterial({
+        color: 0x222233,
+        roughness: 0.4,
+        metalness: 0.6,
+      }),
+      windowGlow: new THREE.MeshStandardMaterial({
+        color: 0xffeecc,
+        emissive: 0xffeeaa,
+        emissiveIntensity: 0.15,
+        roughness: 0.3,
+        metalness: 0.1,
+      }),
+      accent: new THREE.MeshStandardMaterial({
+        color: 0x556677,
+        roughness: 0.3,
+        metalness: 0.7,
+      }),
     }
   }
 
@@ -79,9 +113,15 @@ export class BuildingBuilder {
     group.add(body)
 
     this._addFloorLines(group, width, height, depth, floors)
+    this._addWindowDetails(group, width, height, depth, floors, type)
 
     if (type === 'commercial' || type === 'office') {
       this._addGlassFacade(group, width, height, depth)
+      this._addFacadeAccent(group, width, height, depth, type)
+    }
+
+    if (type === 'residential') {
+      this._addBalconies(group, width, height, depth, floors)
     }
 
     this._addRoof(group, width, height, depth, type)
@@ -115,8 +155,14 @@ export class BuildingBuilder {
       0,1,0,   0,1,0,   0,1,0,   0,1,0,
     ])
 
+    const uvs = new Float32Array([
+      0,0,  width/4,0,  width/4,height/4,  0,height/4,
+      0,0,  width/4,0,  width/4,height/4,  0,height/4,
+    ])
+
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
+    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
     geo.setIndex(indices)
     geo.computeVertexNormals()
     return geo
@@ -141,12 +187,126 @@ export class BuildingBuilder {
     }
   }
 
+  _addWindowDetails(group, width, height, depth, floors, type) {
+    const hw = width / 2 + 0.06
+    const hd = depth / 2 + 0.06
+    const floorHeight = 3
+    const windowWidth = type === 'residential' ? 0.8 : 1.0
+    const windowHeight = type === 'residential' ? 1.2 : 1.6
+    const windowDepth = 0.08
+
+    const windowFrameGeo = new THREE.BoxGeometry(windowWidth + 0.1, windowHeight + 0.1, windowDepth)
+    const windowPaneGeo = new THREE.BoxGeometry(windowWidth, windowHeight, windowDepth * 0.5)
+
+    const sides = [
+      { axis: 'z', sign: 1, pos: [0, 0, hd], rotY: 0 },
+      { axis: 'z', sign: -1, pos: [0, 0, -hd], rotY: Math.PI },
+      { axis: 'x', sign: 1, pos: [hw, 0, 0], rotY: Math.PI / 2 },
+      { axis: 'x', sign: -1, pos: [-hw, 0, 0], rotY: -Math.PI / 2 },
+    ]
+
+    for (const side of sides) {
+      const sideWidth = side.axis === 'z' ? width : depth
+      const windowsPerFloor = Math.max(1, Math.floor(sideWidth / (windowWidth + 0.6)))
+      const spacing = sideWidth / (windowsPerFloor + 1)
+      const startOffset = -sideWidth / 2 + spacing
+
+      for (let floor = 0; floor < floors; floor++) {
+        const yBase = floor * floorHeight + floorHeight * 0.35
+
+        for (let w = 0; w < windowsPerFloor; w++) {
+          const offset = startOffset + w * spacing
+          const frame = new THREE.Mesh(windowFrameGeo, this.materials.windowFrame)
+          const pane = new THREE.Mesh(windowPaneGeo, this.materials.windowGlow)
+
+          const localX = side.axis === 'z' ? offset : 0
+          const localZ = side.axis === 'x' ? offset : 0
+
+          frame.position.set(
+            localX + side.pos[0],
+            yBase + windowHeight / 2,
+            localZ + side.pos[2]
+          )
+          frame.rotation.y = side.rotY
+          frame.castShadow = true
+          group.add(frame)
+
+          pane.position.copy(frame.position)
+          pane.position.z += 0.02 * side.sign
+          pane.rotation.y = side.rotY
+          group.add(pane)
+        }
+      }
+    }
+  }
+
   _addGlassFacade(group, width, height, depth) {
     const glassGeo = new THREE.BoxGeometry(width + 0.1, height, depth + 0.1)
     const glass = new THREE.Mesh(glassGeo, this.materials.glass)
     glass.position.y = height / 2
     glass.userData = { interactive: true, buildingId: group.userData.buildingId }
     group.add(glass)
+  }
+
+  _addFacadeAccent(group, width, height, depth, type) {
+    const accentMat = this.materials.accent
+
+    const cornerGeo = new THREE.BoxGeometry(0.15, height, 0.15)
+    const hw = width / 2 + 0.06
+    const hd = depth / 2 + 0.06
+    const corners = [
+      [-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd],
+    ]
+    for (const pos of corners) {
+      const corner = new THREE.Mesh(cornerGeo, accentMat)
+      corner.position.set(pos[0], height / 2, pos[2])
+      corner.castShadow = true
+      group.add(corner)
+    }
+
+    const horizontalGeo = new THREE.BoxGeometry(width + 0.12, 0.12, depth + 0.12)
+    const positions = [0, height, height * 0.5]
+    for (const y of positions) {
+      const band = new THREE.Mesh(horizontalGeo, accentMat)
+      band.position.y = y
+      band.castShadow = true
+      group.add(band)
+    }
+  }
+
+  _addBalconies(group, width, height, depth, floors) {
+    const balconyMat = new THREE.MeshStandardMaterial({
+      color: 0x998877,
+      roughness: 0.7,
+      metalness: 0.1,
+    })
+    const railingMat = new THREE.MeshStandardMaterial({
+      color: 0x666677,
+      roughness: 0.4,
+      metalness: 0.5,
+    })
+
+    const hw = width / 2
+    const hd = depth / 2
+
+    for (let floor = 1; floor < floors; floor += 2) {
+      const y = floor * 3
+
+      for (const side of [{ x: hw + 0.3, z: 0, rotY: Math.PI / 2 }, { x: -hw - 0.3, z: 0, rotY: -Math.PI / 2 }]) {
+        const slabGeo = new THREE.BoxGeometry(0.6, 0.08, depth * 0.8)
+        const slab = new THREE.Mesh(slabGeo, balconyMat)
+        slab.position.set(side.x, y, side.z)
+        slab.castShadow = true
+        slab.receiveShadow = true
+        group.add(slab)
+
+        const railGeo = new THREE.BoxGeometry(0.04, 0.5, depth * 0.8)
+        const rail = new THREE.Mesh(railGeo, railingMat)
+        const railOffset = side.x > 0 ? 0.3 : -0.3
+        rail.position.set(side.x + railOffset, y + 0.29, side.z)
+        group.add(rail)
+      }
+    }
   }
 
   _addRoof(group, width, height, depth, type) {
@@ -174,6 +334,8 @@ export class BuildingBuilder {
       roof.castShadow = true
       roof.userData = { interactive: true, buildingId: group.userData.buildingId }
       group.add(roof)
+
+      this._addRoofDetails(group, width, height + roofHeight, depth)
     } else {
       const roofGeo = new THREE.BoxGeometry(width + 0.5, roofHeight, depth + 0.5)
       const roof = new THREE.Mesh(roofGeo, this.materials.roof)
@@ -182,6 +344,43 @@ export class BuildingBuilder {
       roof.userData = { interactive: true, buildingId: group.userData.buildingId }
       group.add(roof)
     }
+  }
+
+  _addRoofDetails(group, width, peakY, depth) {
+    const antennaMat = new THREE.MeshStandardMaterial({
+      color: 0x888899,
+      roughness: 0.3,
+      metalness: 0.8,
+    })
+    const antennaGeo = new THREE.CylinderGeometry(0.03, 0.05, 3, 6)
+    const antenna = new THREE.Mesh(antennaGeo, antennaMat)
+    antenna.position.set(0, peakY + 1.5, 0)
+    antenna.castShadow = true
+    group.add(antenna)
+
+    const lightGeo = new THREE.SphereGeometry(0.08, 6, 4)
+    const lightMat = new THREE.MeshStandardMaterial({
+      color: 0xff0000,
+      emissive: 0xff0000,
+      emissiveIntensity: 0.5,
+      transparent: true,
+      opacity: 0.9,
+    })
+    const light = new THREE.Mesh(lightGeo, lightMat)
+    light.position.set(0, peakY + 3.1, 0)
+    light.name = 'roofLight'
+    group.add(light)
+
+    const acGeo = new THREE.BoxGeometry(1.5, 0.5, 1.0)
+    const acMat = new THREE.MeshStandardMaterial({
+      color: 0x777788,
+      roughness: 0.6,
+      metalness: 0.4,
+    })
+    const ac = new THREE.Mesh(acGeo, acMat)
+    ac.position.set(width / 4, peakY + 0.25, depth / 4)
+    ac.castShadow = true
+    group.add(ac)
   }
 
   getBuildingById(id) {
@@ -197,6 +396,14 @@ export class BuildingBuilder {
       position: [g.position.x, g.position.z],
       floors: g.userData.floors,
     }))
+  }
+
+  updateAnimation(elapsed) {
+    this.buildingGroup.traverse((child) => {
+      if (child.name === 'roofLight') {
+        child.material.emissiveIntensity = 0.3 + Math.sin(elapsed * 2) * 0.3
+      }
+    })
   }
 
   dispose() {
