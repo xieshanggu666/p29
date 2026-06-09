@@ -92,7 +92,7 @@ export class LandscapeBuilder {
     const indices = []
     const normals = []
 
-    positions.push(0, -depth, 0)
+    positions.push(0, -0.3, 0)
     normals.push(0, 1, 0)
 
     for (let i = 0; i <= segments; i++) {
@@ -101,7 +101,7 @@ export class LandscapeBuilder {
       const rz = radii[1]
       const x = Math.cos(angle) * rx
       const z = Math.sin(angle) * rz
-      let y = -0.1
+      let y = -0.3
 
       if (depths && depths.length > 0) {
         const totalDepths = depths.length
@@ -110,7 +110,7 @@ export class LandscapeBuilder {
           const dz = z - d.offset[1]
           const dist = Math.sqrt(dx * dx + dz * dz)
           const influence = Math.max(0, 1 - dist / d.radius)
-          y = Math.min(y, -0.1 - d.depth * influence)
+          y = Math.min(y, -0.3 - d.depth * influence * 0.3)
         }
       }
 
@@ -144,16 +144,17 @@ export class LandscapeBuilder {
   _createWaterSurface(group, radii, waterColor) {
     const segments = 48
     const rings = 12
+    const waterY = 0.08
     const positions = []
     const indices = []
     const normals = []
     const uvs = []
     const baseYValues = []
 
-    positions.push(0, -0.05, 0)
+    positions.push(0, waterY, 0)
     normals.push(0, 1, 0)
     uvs.push(0.5, 0.5)
-    baseYValues.push(-0.05)
+    baseYValues.push(waterY)
 
     for (let ring = 1; ring <= rings; ring++) {
       const ringT = ring / rings
@@ -164,12 +165,11 @@ export class LandscapeBuilder {
         const angle = (seg / segments) * Math.PI * 2
         const x = Math.cos(angle) * rx
         const z = Math.sin(angle) * rz
-        const y = -0.05
 
-        positions.push(x, y, z)
+        positions.push(x, waterY, z)
         normals.push(0, 1, 0)
         uvs.push(0.5 + Math.cos(angle) * ringT * 0.5, 0.5 + Math.sin(angle) * ringT * 0.5)
-        baseYValues.push(y)
+        baseYValues.push(waterY)
       }
     }
 
@@ -207,6 +207,7 @@ export class LandscapeBuilder {
       transparent: true,
       opacity: 0.85,
       envMapIntensity: 1.5,
+      side: THREE.DoubleSide,
     })
 
     const mesh = new THREE.Mesh(geo, mat)
@@ -233,8 +234,8 @@ export class LandscapeBuilder {
       const outerX = cos * (radii[0] + shoreWidth)
       const outerZ = sin * (radii[1] + shoreWidth)
 
-      positions.push(innerX, 0.02, innerZ)
-      positions.push(outerX, 0.05, outerZ)
+      positions.push(innerX, 0.12, innerZ)
+      positions.push(outerX, 0.18, outerZ)
     }
 
     for (let i = 0; i < segments; i++) {
@@ -299,7 +300,7 @@ export class LandscapeBuilder {
 
       const reedGeo = new THREE.CylinderGeometry(0.03, 0.05, height, 4)
       const reed = new THREE.Mesh(reedGeo, reedMat)
-      reed.position.set(rx, height / 2 - 0.05, rz)
+      reed.position.set(rx, 0.08 + height / 2, rz)
       reed.rotation.z = (Math.random() - 0.5) * 0.15
       group.add(reed)
     }
@@ -314,7 +315,7 @@ export class LandscapeBuilder {
       side: THREE.DoubleSide,
     })
     const lily = new THREE.Mesh(lilyGeo, lilyMat)
-    lily.position.set(x, -0.02, z)
+    lily.position.set(x, 0.09, z)
     lily.rotation.x = -Math.PI / 2
     group.add(lily)
 
@@ -325,7 +326,7 @@ export class LandscapeBuilder {
         roughness: 0.5,
       })
       const flower = new THREE.Mesh(flowerGeo, flowerMat)
-      flower.position.set(x, 0.05, z)
+      flower.position.set(x, 0.15, z)
       flower.scale.y = 0.6
       group.add(flower)
     }
@@ -390,7 +391,7 @@ export class LandscapeBuilder {
 
   _createFlowParticles(group, flowPath) {
     const curve = new THREE.CatmullRomCurve3(
-      flowPath.map(p => new THREE.Vector3(p[0], -0.03, p[1])),
+      flowPath.map(p => new THREE.Vector3(p[0], 0.07, p[1])),
       false
     )
 
@@ -422,7 +423,7 @@ export class LandscapeBuilder {
       opacity: 0.3,
     })
     const flowLine = new THREE.Line(flowLineGeo, flowLineMat)
-    flowLine.position.y = -0.02
+    flowLine.position.y = 0.06
     flowLine.name = 'flowLine'
     group.add(flowLine)
   }
@@ -978,12 +979,12 @@ export class LandscapeBuilder {
       particle.userData.t = t
       const point = particle.userData.curve.getPointAt(t)
       particle.position.copy(point)
-      particle.position.y = -0.03 + Math.sin(elapsed * 2 + t * 10) * 0.02
+      particle.position.y = 0.07 + Math.sin(elapsed * 2 + t * 10) * 0.02
     }
 
     this.landscapeGroup.traverse((child) => {
       if (child.name === 'boundaryBuoy' && child.userData.isBuoy) {
-        child.position.y = 0.05 + Math.sin(elapsed * 1.5 + child.position.x * 0.5) * 0.03
+        child.position.y = 0.1 + Math.sin(elapsed * 1.5 + child.position.x * 0.5) * 0.03
       }
       if (child.name === 'warningLight') {
         child.material.emissiveIntensity = 0.3 + Math.sin(elapsed * 3) * 0.3
