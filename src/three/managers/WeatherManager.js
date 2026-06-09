@@ -5,8 +5,9 @@ export class WeatherManager {
     this.scene = scene
     this.currentWeather = 'sunny'
     this.particleSystems = {}
+    this.particleData = {}
     this.animationTime = 0
-    
+
     this.weatherConfig = {
       sunny: {
         background: 0x7EC8E3,
@@ -44,18 +45,18 @@ export class WeatherManager {
         groundColor: 0xD0D8E0,
       },
     }
-    
+
     this.lights = {}
     this._createWeatherLights()
   }
-  
+
   _createWeatherLights() {
     this.lights.ambient = this.scene.getObjectByName('weather-ambient') || new THREE.AmbientLight(0x404060, 0.8)
     this.lights.ambient.name = 'weather-ambient'
     if (!this.scene.getObjectByName('weather-ambient')) {
       this.scene.add(this.lights.ambient)
     }
-    
+
     this.lights.directional = this.scene.getObjectByName('weather-directional')
     if (!this.lights.directional) {
       this.lights.directional = new THREE.DirectionalLight(0xffeedd, 1.8)
@@ -63,7 +64,7 @@ export class WeatherManager {
       this.lights.directional.name = 'weather-directional'
       this.scene.add(this.lights.directional)
     }
-    
+
     this.lights.fill = this.scene.getObjectByName('weather-fill') || new THREE.DirectionalLight(0xaabbff, 0.4)
     this.lights.fill.position.set(-30, 40, -30)
     this.lights.fill.name = 'weather-fill'
@@ -71,18 +72,18 @@ export class WeatherManager {
       this.scene.add(this.lights.fill)
     }
   }
-  
+
   setWeather(weatherType) {
     if (this.currentWeather === weatherType) return
-    
+
     this.currentWeather = weatherType
     this._clearParticleSystems()
-    
+
     const config = this.weatherConfig[weatherType]
     if (!config) return
-    
+
     this._updateEnvironment(config)
-    
+
     switch (weatherType) {
       case 'rainy':
         this._createRainSystem()
@@ -98,21 +99,21 @@ export class WeatherManager {
         break
     }
   }
-  
+
   _updateEnvironment(config) {
     if (this.scene.background instanceof THREE.Color) {
-      this.scene.background = new THREE.Color(config.background)
+      this.scene.background.setHex(config.background)
     }
-    
+
     if (this.scene.fog) {
       this.scene.fog.density = config.fogDensity
-      this.scene.fog.color = new THREE.Color(config.background)
+      this.scene.fog.color.setHex(config.background)
     }
-    
+
     if (this.lights.ambient) {
       this.lights.ambient.intensity = config.ambientIntensity
     }
-    
+
     if (this.lights.directional) {
       this.lights.directional.intensity = config.directionalIntensity
       if (this.currentWeather === 'rainy' || this.currentWeather === 'overcast') {
@@ -123,264 +124,185 @@ export class WeatherManager {
         this.lights.directional.color.setHex(0xffeedd)
       }
     }
-    
+
     if (this.lights.fill) {
       this.lights.fill.intensity = this.currentWeather === 'sunny' ? 0.4 : 0.2
     }
-    
+
     this.scene.traverse((obj) => {
       if (obj.name === 'ground' && obj.material) {
         obj.material.color.setHex(config.groundColor)
       }
     })
   }
-  
+
   _createRainSystem() {
     const rainCount = 5000
-    const rainGeometry = new THREE.BufferGeometry()
-    const rainPositions = new Float32Array(rainCount * 3)
-    const rainVelocities = new Float32Array(rainCount * 3)
-    
+    const geometry = new THREE.BufferGeometry()
+    const positions = new Float32Array(rainCount * 3)
+    const velocities = new Float32Array(rainCount)
+
     for (let i = 0; i < rainCount; i++) {
-      rainPositions[i * 3] = (Math.random() - 0.5) * 300
-      rainPositions[i * 3 + 1] = Math.random() * 150
-      rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 300
-      
-      rainVelocities[i * 3] = (Math.random() - 0.5) * 0.5
-      rainVelocities[i * 3 + 1] = -15 - Math.random() * 20
-      rainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.5
+      positions[i * 3] = (Math.random() - 0.5) * 300
+      positions[i * 3 + 1] = Math.random() * 150
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 300
+      velocities[i] = 15 + Math.random() * 20
     }
-    
-    rainGeometry.setAttribute('position', new THREE.Float32BufferAttribute(rainPositions, 3))
-    rainGeometry.setAttribute('velocity', new THREE.Float32BufferAttribute(rainVelocities, 3))
-    
-    const rainMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        color: { value: new THREE.Color(0x4a5a6a) },
-        size: { value: 0.15 },
-      },
-      vertexShader: `
-        attribute vec3 velocity;
-        varying vec3 vColor;
-        uniform float time;
-        
-        void main() {
-          vColor = color;
-          vec3 pos = position + velocity * time * 0.1;
-          if (pos.y < 0.1) {
-            pos.y = 150.0;
-          }
-          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-          gl_PointSize = size * (300.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vColor;
-        void main() {
-          float dist = length(gl_PointCoord - vec2(0.5));
-          if (dist > 0.5) discard;
-          float alpha = 1.0 - dist * 2.0;
-          gl_FragColor = vec4(vColor, alpha * 0.6);
-        }
-      `,
+
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+
+    const material = new THREE.PointsMaterial({
+      color: 0x8ab4d8,
+      size: 0.3,
       transparent: true,
+      opacity: 0.6,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      sizeAttenuation: true,
     })
-    
-    const rainSystem = new THREE.Points(rainGeometry, rainMaterial)
-    rainSystem.name = 'rain-particles'
-    this.scene.add(rainSystem)
-    this.particleSystems.rain = rainSystem
-    
+
+    const rain = new THREE.Points(geometry, material)
+    rain.name = 'rain-particles'
+    this.scene.add(rain)
+    this.particleSystems.rain = rain
+    this.particleData.rain = { velocities, count: rainCount }
+
+    const splashCount = 200
     const splashGeometry = new THREE.BufferGeometry()
-    const splashPositions = new Float32Array(200 * 3)
-    const splashTimes = new Float32Array(200)
-    
-    for (let i = 0; i < 200; i++) {
-      splashPositions[i * 3] = (Math.random() - 0.5) * 280
+    const splashPositions = new Float32Array(splashCount * 3)
+    const splashBasePositions = new Float32Array(splashCount * 3)
+    const splashPhases = new Float32Array(splashCount)
+
+    for (let i = 0; i < splashCount; i++) {
+      const x = (Math.random() - 0.5) * 280
+      const z = (Math.random() - 0.5) * 280
+      splashPositions[i * 3] = x
       splashPositions[i * 3 + 1] = 0.01
-      splashPositions[i * 3 + 2] = (Math.random() - 0.5) * 280
-      splashTimes[i] = Math.random() * 2
+      splashPositions[i * 3 + 2] = z
+      splashBasePositions[i * 3] = x
+      splashBasePositions[i * 3 + 1] = 0.01
+      splashBasePositions[i * 3 + 2] = z
+      splashPhases[i] = Math.random() * Math.PI * 2
     }
-    
+
     splashGeometry.setAttribute('position', new THREE.Float32BufferAttribute(splashPositions, 3))
-    splashGeometry.setAttribute('timeOffset', new THREE.Float32BufferAttribute(splashTimes, 1))
-    
-    const splashMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        color: { value: new THREE.Color(0x5a7a9a) },
-        size: { value: 0.3 },
-        time: { value: 0 },
-      },
-      vertexShader: `
-        attribute float timeOffset;
-        varying float vAlpha;
-        uniform float time;
-        uniform float size;
-        
-        void main() {
-          float t = mod(time + timeOffset, 1.0);
-          float scale = 1.0 - t;
-          vAlpha = scale * 0.5;
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = size * scale * (300.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: `
-        varying float vAlpha;
-        uniform vec3 color;
-        
-        void main() {
-          float dist = length(gl_PointCoord - vec2(0.5));
-          if (dist > 0.5) discard;
-          float alpha = (1.0 - dist * 2.0) * vAlpha;
-          gl_FragColor = vec4(color, alpha);
-        }
-      `,
+
+    const splashMaterial = new THREE.PointsMaterial({
+      color: 0x5a8aba,
+      size: 0.4,
       transparent: true,
+      opacity: 0.4,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      sizeAttenuation: true,
     })
-    
-    const splashSystem = new THREE.Points(splashGeometry, splashMaterial)
-    splashSystem.name = 'rain-splash'
-    this.scene.add(splashSystem)
-    this.particleSystems.splash = splashSystem
+
+    const splash = new THREE.Points(splashGeometry, splashMaterial)
+    splash.name = 'rain-splash'
+    this.scene.add(splash)
+    this.particleSystems.splash = splash
+    this.particleData.splash = { basePositions: splashBasePositions, phases: splashPhases, count: splashCount }
   }
-  
+
   _createSnowSystem() {
     const snowCount = 3000
-    const snowGeometry = new THREE.BufferGeometry()
-    const snowPositions = new Float32Array(snowCount * 3)
-    const snowVelocities = new Float32Array(snowCount * 3)
-    const snowSizes = new Float32Array(snowCount)
-    const snowPhases = new Float32Array(snowCount)
-    
+    const geometry = new THREE.BufferGeometry()
+    const positions = new Float32Array(snowCount * 3)
+    const velocities = new Float32Array(snowCount * 3)
+    const phases = new Float32Array(snowCount)
+
     for (let i = 0; i < snowCount; i++) {
-      snowPositions[i * 3] = (Math.random() - 0.5) * 350
-      snowPositions[i * 3 + 1] = Math.random() * 200
-      snowPositions[i * 3 + 2] = (Math.random() - 0.5) * 350
-      
-      snowVelocities[i * 3] = (Math.random() - 0.5) * 2
-      snowVelocities[i * 3 + 1] = -2 - Math.random() * 3
-      snowVelocities[i * 3 + 2] = (Math.random() - 0.5) * 2
-      
-      snowSizes[i] = 0.8 + Math.random() * 1.2
-      snowPhases[i] = Math.random() * Math.PI * 2
+      positions[i * 3] = (Math.random() - 0.5) * 300
+      positions[i * 3 + 1] = Math.random() * 150
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 300
+      velocities[i * 3] = (Math.random() - 0.5) * 2
+      velocities[i * 3 + 1] = 1 + Math.random() * 2
+      velocities[i * 3 + 2] = (Math.random() - 0.5) * 2
+      phases[i] = Math.random() * Math.PI * 2
     }
-    
-    snowGeometry.setAttribute('position', new THREE.Float32BufferAttribute(snowPositions, 3))
-    snowGeometry.setAttribute('velocity', new THREE.Float32BufferAttribute(snowVelocities, 3))
-    snowGeometry.setAttribute('size', new THREE.Float32BufferAttribute(snowSizes, 1))
-    snowGeometry.setAttribute('phase', new THREE.Float32BufferAttribute(snowPhases, 1))
-    
-    const snowMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        color: { value: new THREE.Color(0xffffff) },
-        time: { value: 0 },
-      },
-      vertexShader: `
-        attribute vec3 velocity;
-        attribute float size;
-        attribute float phase;
-        varying float vAlpha;
-        uniform float time;
-        
-        void main() {
-          float wobble = sin(time * 2.0 + phase) * 0.5;
-          vec3 pos = position + velocity * time * 0.05;
-          pos.x += wobble;
-          pos.z += cos(time * 1.5 + phase) * 0.3;
-          
-          if (pos.y < 0.1) {
-            pos.y = 200.0;
-            pos.x = (random(position.xy) - 0.5) * 350;
-            pos.z = (random(position.yz) - 0.5) * 350;
-          }
-          
-          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-          gl_PointSize = size * (300.0 / -mvPosition.z);
-          vAlpha = 0.8 + sin(time + phase) * 0.2;
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: `
-        varying float vAlpha;
-        uniform vec3 color;
-        
-        void main() {
-          float dist = length(gl_PointCoord - vec2(0.5));
-          if (dist > 0.5) discard;
-          float alpha = (1.0 - dist * 2.0) * vAlpha * 0.9;
-          float glow = exp(-dist * 4.0) * 0.3;
-          gl_FragColor = vec4(color + glow, alpha);
-        }
-      `,
+
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+
+    const material = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 1.2,
       transparent: true,
+      opacity: 0.85,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      sizeAttenuation: true,
     })
-    
-    const snowSystem = new THREE.Points(snowGeometry, snowMaterial)
-    snowSystem.name = 'snow-particles'
-    this.scene.add(snowSystem)
-    this.particleSystems.snow = snowSystem
+
+    const snow = new THREE.Points(geometry, material)
+    snow.name = 'snow-particles'
+    this.scene.add(snow)
+    this.particleSystems.snow = snow
+    this.particleData.snow = { velocities, phases, count: snowCount }
   }
-  
+
   _createCloudSystem(overcast = false) {
     const cloudCount = overcast ? 12 : 6
     const clouds = []
-    
+
     for (let i = 0; i < cloudCount; i++) {
-      const cloudGeometry = new THREE.BufferGeometry()
-      const positions = []
       const cloudSize = 20 + Math.random() * 30
-      
-      for (let j = 0; j < 50; j++) {
-        const offsetX = (Math.random() - 0.5) * cloudSize
-        const offsetY = Math.random() * cloudSize * 0.3
-        const offsetZ = (Math.random() - 0.5) * cloudSize
-        positions.push(offsetX, offsetY, offsetZ)
+      const cloudGroup = new THREE.Group()
+      cloudGroup.name = `cloud-${i}`
+
+      const blobCount = 5 + Math.floor(Math.random() * 4)
+      for (let j = 0; j < blobCount; j++) {
+        const blobRadius = cloudSize * (0.3 + Math.random() * 0.4)
+        const blobGeo = new THREE.SphereGeometry(blobRadius, 8, 6)
+        const blobMat = new THREE.MeshStandardMaterial({
+          color: overcast ? 0x5a6a7a : 0xd0d8e0,
+          transparent: true,
+          opacity: overcast ? 0.85 : 0.7,
+          roughness: 1,
+          metalness: 0,
+        })
+        const blob = new THREE.Mesh(blobGeo, blobMat)
+        blob.position.set(
+          (Math.random() - 0.5) * cloudSize * 0.8,
+          (Math.random() - 0.3) * cloudSize * 0.2,
+          (Math.random() - 0.5) * cloudSize * 0.6
+        )
+        blob.scale.y = 0.4 + Math.random() * 0.3
+        cloudGroup.add(blob)
       }
-      
-      cloudGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-      
-      const cloudMaterial = new THREE.MeshBasicMaterial({
-        color: overcast ? 0x4a5a6a : 0xc0c8d0,
-        transparent: true,
-        opacity: overcast ? 0.9 : 0.7,
-      })
-      
-      const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial)
-      cloud.position.set(
+
+      cloudGroup.position.set(
         (Math.random() - 0.5) * 400,
-        80 + Math.random() * 40,
+        75 + Math.random() * 40,
         (Math.random() - 0.5) * 400
       )
-      cloud.scale.setScalar(1.5 + Math.random())
-      cloud.userData.originalPosition = cloud.position.clone()
-      cloud.userData.speed = 0.02 + Math.random() * 0.03
-      cloud.name = `cloud-${i}`
-      
-      clouds.push(cloud)
-      this.scene.add(cloud)
+      cloudGroup.scale.setScalar(1 + Math.random() * 0.5)
+      cloudGroup.userData.originalPosition = cloudGroup.position.clone()
+      cloudGroup.userData.speed = 0.02 + Math.random() * 0.03
+
+      clouds.push(cloudGroup)
+      this.scene.add(cloudGroup)
     }
-    
+
     this.particleSystems.clouds = clouds
   }
-  
+
   _clearParticleSystems() {
     Object.values(this.particleSystems).forEach((system) => {
       if (Array.isArray(system)) {
         system.forEach((obj) => {
-          if (obj.geometry) obj.geometry.dispose()
-          if (obj.material) obj.material.dispose()
+          obj.traverse((child) => {
+            if (child.geometry) child.geometry.dispose()
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach(m => m.dispose())
+              } else {
+                child.material.dispose()
+              }
+            }
+          })
           this.scene.remove(obj)
         })
-      } else {
+      } else if (system) {
         if (system.geometry) system.geometry.dispose()
         if (system.material) {
           if (Array.isArray(system.material)) {
@@ -393,36 +315,98 @@ export class WeatherManager {
       }
     })
     this.particleSystems = {}
+    this.particleData = {}
   }
-  
+
   update(delta, elapsed) {
     this.animationTime += delta
-    
-    if (this.particleSystems.rain && this.particleSystems.rain.material.uniforms) {
-      this.particleSystems.rain.material.uniforms.time.value = elapsed
+
+    if (this.particleSystems.rain && this.particleData.rain) {
+      this._updateRain(delta, elapsed)
     }
-    
-    if (this.particleSystems.splash && this.particleSystems.splash.material.uniforms) {
-      this.particleSystems.splash.material.uniforms.time.value = elapsed
+
+    if (this.particleSystems.splash && this.particleData.splash) {
+      this._updateSplash(delta, elapsed)
     }
-    
-    if (this.particleSystems.snow && this.particleSystems.snow.material.uniforms) {
-      this.particleSystems.snow.material.uniforms.time.value = elapsed
+
+    if (this.particleSystems.snow && this.particleData.snow) {
+      this._updateSnow(delta, elapsed)
     }
-    
+
     if (this.particleSystems.clouds) {
-      this.particleSystems.clouds.forEach((cloud) => {
-        cloud.position.x += cloud.userData.speed
-        cloud.rotation.y += delta * 0.1
-        
-        if (cloud.position.x > 220) {
-          cloud.position.x = -220
-          cloud.position.z = cloud.userData.originalPosition.z + (Math.random() - 0.5) * 100
-        }
-      })
+      this._updateClouds(delta)
     }
   }
-  
+
+  _updateRain(delta, elapsed) {
+    const rain = this.particleSystems.rain
+    const data = this.particleData.rain
+    const positions = rain.geometry.attributes.position.array
+    const windX = Math.sin(elapsed * 0.3) * 2
+
+    for (let i = 0; i < data.count; i++) {
+      positions[i * 3] += windX * delta
+      positions[i * 3 + 1] -= data.velocities[i] * delta
+      positions[i * 3 + 2] += (Math.random() - 0.5) * delta
+
+      if (positions[i * 3 + 1] < 0.1) {
+        positions[i * 3] = (Math.random() - 0.5) * 300
+        positions[i * 3 + 1] = 140 + Math.random() * 10
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 300
+      }
+    }
+
+    rain.geometry.attributes.position.needsUpdate = true
+  }
+
+  _updateSplash(delta, elapsed) {
+    const splash = this.particleSystems.splash
+    const data = this.particleData.splash
+    const positions = splash.geometry.attributes.position.array
+
+    for (let i = 0; i < data.count; i++) {
+      const t = (elapsed * 2 + data.phases[i]) % 1
+      const scale = 1 - t
+      positions[i * 3] = data.basePositions[i * 3] + Math.sin(t * Math.PI * 2) * 0.5 * scale
+      positions[i * 3 + 1] = data.basePositions[i * 3 + 1] + Math.sin(t * Math.PI) * 0.3 * scale
+      positions[i * 3 + 2] = data.basePositions[i * 3 + 2] + Math.cos(t * Math.PI * 2) * 0.5 * scale
+    }
+
+    splash.geometry.attributes.position.needsUpdate = true
+    splash.material.opacity = 0.3 + Math.sin(elapsed * 4) * 0.1
+  }
+
+  _updateSnow(delta, elapsed) {
+    const snow = this.particleSystems.snow
+    const data = this.particleData.snow
+    const positions = snow.geometry.attributes.position.array
+
+    for (let i = 0; i < data.count; i++) {
+      const phase = data.phases[i]
+      positions[i * 3] += (Math.sin(elapsed * 0.5 + phase) * 0.5 + data.velocities[i * 3] * delta * 0.3)
+      positions[i * 3 + 1] -= data.velocities[i * 3 + 1] * delta
+      positions[i * 3 + 2] += (Math.cos(elapsed * 0.4 + phase) * 0.3 + data.velocities[i * 3 + 2] * delta * 0.3)
+
+      if (positions[i * 3 + 1] < 0.1) {
+        positions[i * 3] = (Math.random() - 0.5) * 300
+        positions[i * 3 + 1] = 140 + Math.random() * 10
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 300
+      }
+    }
+
+    snow.geometry.attributes.position.needsUpdate = true
+  }
+
+  _updateClouds(delta) {
+    this.particleSystems.clouds.forEach((cloud) => {
+      cloud.position.x += cloud.userData.speed
+      if (cloud.position.x > 220) {
+        cloud.position.x = -220
+        cloud.position.z = cloud.userData.originalPosition.z + (Math.random() - 0.5) * 100
+      }
+    })
+  }
+
   dispose() {
     this._clearParticleSystems()
   }

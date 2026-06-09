@@ -178,3 +178,72 @@
    - 新增俯仰(pitch)：突冲时下俯，平时归零
    - Y轴浮动改为双频叠加
    - 去掉 traverse 查找子对象，改为直接引用 tailMesh/leftPecFinMesh/rightPecFinMesh
+
+### 2026-06-09 天气切换功能开发 & Bug修复
+
+#### 功能开发
+1. **sceneStore 天气状态管理**
+   - 新增 currentWeather（默认sunny）、isWeatherTransitioning、weatherTransitionProgress
+   - 新增 weatherOptions 配置数组（晴天/多云/阴天/雨天/雪天）
+   - 新增 setCurrentWeather、setWeatherTransitioning、setWeatherTransitionProgress 方法
+
+2. **WeatherManager 天气管理器** (src/three/managers/WeatherManager.js)
+   - 5种天气环境配置：背景色、环境光强度、方向光强度、雾密度、地面颜色
+   - 天气切换时动态更新场景背景、雾效、光照、地面颜色
+   - 雨天：5000个雨滴粒子 + 200个溅水效果粒子
+   - 雪天：3000个雪花粒子，带横向摇摆和正弦波动
+   - 多云/阴天：6~12个云朵（球体组合），水平漂移动画
+   - 粒子动画采用JS驱动（update方法中更新BufferGeometry位置）
+
+3. **WeatherSelector 天气选择控件** (src/components/WeatherSelector.vue)
+   - 下拉菜单式天气选择器，显示当前天气图标和名称
+   - 过渡动画（下拉展开/收起、Toast提示）
+   - 切换中加载指示器
+   - 响应式适配移动端
+
+4. **ToolBar 集成天气选择器**
+   - 新增 change-weather 事件
+   - 引入 WeatherSelector 组件
+
+5. **useThreeScene.js 集成**
+   - 新增 weatherManager 实例
+   - 新增 changeWeather(weatherType) 方法
+   - 动画循环中调用 weatherManager.update(delta, elapsed)
+   - dispose 时释放 weatherManager 资源
+
+6. **SceneManager 扩展**
+   - 新增 setBackground(color)、setFog(density, color) 方法
+
+#### Bug修复
+
+##### Bug 1：雨天切换后页面动画全部停止，控制台报错 "Cannot set properties of undefined (setting 'value')"
+
+- **问题现象**：切换为雨天时，所有页面动画停止，控制台出现数百个相同错误
+- **根因分析**：
+  - 雨滴粒子系统使用 ShaderMaterial，uniforms 对象中只声明了 `color` 和 `size`，**缺少 `time` 属性**
+  - 顶点着色器中声明了 `uniform float time;`，但 JS 的 uniforms 对象中没有对应的 `time: { value: 0 }`
+  - `update()` 方法中执行 `material.uniforms.time.value = elapsed` 时，`material.uniforms.time` 为 `undefined`
+  - 对 `undefined.value` 赋值触发 TypeError，该错误在每帧动画循环中被抛出，导致整个渲染循环中断
+- **修复方案**：放弃 ShaderMaterial，改用 PointsMaterial + JS驱动粒子位置更新
+  - 雨滴：每帧通过 JS 遍历 position buffer，根据 velocity 更新 Y 坐标，到达地面后重置到顶部
+  - 溅水：基于 phase 和 elapsed 计算循环动画位置
+  - 风向：用 `sin(elapsed * 0.3)` 模拟微风偏移
+
+##### Bug 2：雪天切换后无雪花元素，控制台报错 "Shader Error 1282 - VALIDATE_STATUS false"
+
+- **问题现象**：切换为雪天后看不到任何雪花粒子，着色器验证失败
+- **根因分析**：
+  - 雪花粒子使用 ShaderMaterial，顶点着色器中调用了 `random(position.xy)` 和 `random(position.yz)`
+  - **`random()` 不是 GLSL 内置函数**，WebGL 的 GLSL ES 1.0/3.0 均不提供此函数
+  - 着色器编译失败，Three.js 报 VALIDATE_STATUS false (错误码 1282)
+  - 编译失败的材质不会渲染任何内容，因此看不到雪花
+- **修复方案**：同样放弃 ShaderMaterial，改用 PointsMaterial + JS驱动
+  - 雪花：每帧更新 position buffer，Y轴匀速下落 + X/Z轴正弦/余弦摇摆
+  - 每个 snowflake 有独立的 phase 值，确保摇摆不同步
+  - 到达地面后重置到顶部随机位置
+
+##### 修复后的改进
+- **稳定性**：完全消除着色器编译风险，不再依赖自定义 GLSL 代码
+- **可维护性**：粒子动画逻辑在 JS 中，更易调试和修改
+- **云朵视觉**：从点云(BufferGeometry + 50个点)改为球体组合(Group + SphereGeometry)，更真实
+- **资源释放**：_clearParticleSystems 支持 Group 类型的递归 dispose
