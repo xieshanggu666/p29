@@ -164,9 +164,10 @@
 ### 2026-06-09 修复页面卡顿 & 鱼转圈问题
 1. **性能优化：BuildingBuilder 窗户系统重写**
    - 根因：每个窗户创建2个独立Mesh(窗框+面板)，8栋建筑产生数千个draw call导致严重卡顿
-   - 解决：改用 InstancedBufferGeometry，每栋建筑仅2个draw call(窗框实例+面板实例)
+   - 解决：改用 InstancedMesh，每栋建筑仅2个draw call(窗框实例+面板实例)
    - 移除逐楼层Line线条(floor lines)和阳台(balconies)，减少对象数
    - updateAnimation 从 traverse 遍历改为 _roofLights 数组直接引用，避免每帧遍历
+   - 修复：InstancedBufferGeometry.setMatrixAt 不存在，改用 THREE.InstancedMesh
 
 2. **鱼动画重写：从固定圆圈改为路径游动**
    - 根因：鱼用 angle+=delta*speed*turnSpeed 做椭圆运动，视觉上就是围着一点转圈

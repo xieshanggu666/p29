@@ -218,32 +218,19 @@ export class BuildingBuilder {
     }
 
     if (frameMatrices.length > 0) {
-      const mergedFrameGeo = new THREE.BufferGeometry()
-      const frameInstancedGeo = new THREE.InstancedBufferGeometry()
-      frameInstancedGeo.index = frameGeo.index
-      frameInstancedGeo.attributes.position = frameGeo.attributes.position
-      frameInstancedGeo.attributes.normal = frameGeo.attributes.normal
+      const frameInstanced = new THREE.InstancedMesh(frameGeo, this.materials.windowFrame, frameMatrices.length)
       for (let i = 0; i < frameMatrices.length; i++) {
-        frameInstancedGeo.setMatrixAt(i, frameMatrices[i])
+        frameInstanced.setMatrixAt(i, frameMatrices[i])
       }
-      frameInstancedGeo.instanceMatrix.needsUpdate = true
-      frameInstancedGeo.instanceCount = frameMatrices.length
+      frameInstanced.instanceMatrix.needsUpdate = true
+      group.add(frameInstanced)
 
-      const frameMesh = new THREE.Mesh(frameInstancedGeo, this.materials.windowFrame)
-      group.add(frameMesh)
-
-      const paneInstancedGeo = new THREE.InstancedBufferGeometry()
-      paneInstancedGeo.index = paneGeo.index
-      paneInstancedGeo.attributes.position = paneGeo.attributes.position
-      paneInstancedGeo.attributes.normal = paneGeo.attributes.normal
+      const paneInstanced = new THREE.InstancedMesh(paneGeo, this.materials.windowGlow, paneMatrices.length)
       for (let i = 0; i < paneMatrices.length; i++) {
-        paneInstancedGeo.setMatrixAt(i, paneMatrices[i])
+        paneInstanced.setMatrixAt(i, paneMatrices[i])
       }
-      paneInstancedGeo.instanceMatrix.needsUpdate = true
-      paneInstancedGeo.instanceCount = paneMatrices.length
-
-      const paneMesh = new THREE.Mesh(paneInstancedGeo, this.materials.windowGlow)
-      group.add(paneMesh)
+      paneInstanced.instanceMatrix.needsUpdate = true
+      group.add(paneInstanced)
     }
   }
 
