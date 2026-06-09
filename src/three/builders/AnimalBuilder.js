@@ -95,7 +95,7 @@ export class AnimalBuilder {
       birdGroup.add(tail)
 
       const progressOffset = i / count
-      const heightOffset = (Math.random() - 0.5) * 2
+      const heightOffset = (Math.random() - 0.5) * 1.5
       const lateralOffset = (Math.random() - 0.5) * 3
 
       birdDataList.push({
@@ -108,8 +108,18 @@ export class AnimalBuilder {
         heightOffset,
         lateralOffset,
         wingPhase: Math.random() * Math.PI * 2,
-        glideTimer: 0,
+        wingSpeed: 8 + Math.random() * 4,
+        glideTimer: Math.random() * 6,
         isGliding: false,
+        glideDuration: 1.5 + Math.random() * 2,
+        flapDuration: 4 + Math.random() * 6,
+        floatPhase: Math.random() * Math.PI * 2,
+        floatFreq: 0.3 + Math.random() * 0.4,
+        floatAmp: 0.15 + Math.random() * 0.15,
+        swayPhase: Math.random() * Math.PI * 2,
+        swayFreq: 0.5 + Math.random() * 0.3,
+        prevTangent: new THREE.Vector3(),
+        bankAngle: 0,
         closed,
       })
 
@@ -200,7 +210,7 @@ export class AnimalBuilder {
 
       const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5
       const radiusFactor = 0.3 + Math.random() * 0.5
-      const depthY = -0.3 - Math.random() * 0.8
+      const depthOffset = -(0.05 + Math.random() * 0.2)
       const fishSpeed = speed * (0.7 + Math.random() * 0.6)
 
       fishDataList.push({
@@ -209,7 +219,7 @@ export class AnimalBuilder {
         radii,
         angle,
         radiusFactor,
-        depthY,
+        depthOffset,
         speed: fishSpeed,
         tailPhase: Math.random() * Math.PI * 2,
         swimPhase: Math.random() * Math.PI * 2,
@@ -335,34 +345,64 @@ export class AnimalBuilder {
       const lateralX = perpX * bird.lateralOffset
       const lateralZ = perpZ * bird.lateralOffset
 
+      const floatY = Math.sin(elapsed * bird.floatFreq + bird.floatPhase) * bird.floatAmp
+            + Math.sin(elapsed * bird.floatFreq * 1.7 + bird.floatPhase * 0.6) * bird.floatAmp * 0.3
+
       bird.group.position.set(
         point.x + lateralX,
-        point.y + bird.heightOffset + Math.sin(elapsed * 0.8 + bird.wingPhase) * 0.5,
+        point.y + bird.heightOffset + floatY,
         point.z + lateralZ
       )
 
       const angle = Math.atan2(tangent.x, tangent.z)
       bird.group.rotation.y = angle
 
-      const pitchAngle = Math.sin(elapsed * 0.8 + bird.wingPhase) * 0.05
-      bird.group.rotation.x = pitchAngle
+      if (bird.prevTangent.lengthSq() > 0) {
+        const crossY = bird.prevTangent.x * tangent.z - bird.prevTangent.z * tangent.x
+        const dot = bird.prevTangent.dot(tangent)
+        const turnRate = Math.atan2(crossY, dot)
+        const targetBank = -turnRate * 8
+        bird.bankAngle += (targetBank - bird.bankAngle) * Math.min(1, delta * 3)
+      }
+      bird.prevTangent.copy(tangent)
+
+      const swayRoll = Math.sin(elapsed * bird.swayFreq + bird.swayPhase) * 0.02
+      bird.group.rotation.z = bird.bankAngle + swayRoll
 
       bird.glideTimer += delta
-      if (!bird.isGliding && bird.glideTimer > 5 + Math.random() * 8) {
-        bird.isGliding = true
-        bird.glideTimer = 0
-      } else if (bird.isGliding && bird.glideTimer > 1.5 + Math.random() * 2) {
-        bird.isGliding = false
-        bird.glideTimer = 0
+      if (!bird.isGliding) {
+        if (bird.glideTimer > bird.flapDuration) {
+          bird.isGliding = true
+          bird.glideTimer = 0
+          bird.glideDuration = 1.5 + Math.random() * 2.5
+        }
+      } else {
+        if (bird.glideTimer > bird.glideDuration) {
+          bird.isGliding = false
+          bird.glideTimer = 0
+          bird.flapDuration = 3 + Math.random() * 5
+        }
       }
 
-      bird.wingPhase += delta * (bird.isGliding ? 1.5 : 10)
-      const wingAngle = bird.isGliding
-        ? Math.sin(bird.wingPhase) * 0.15 + 0.4
-        : Math.sin(bird.wingPhase) * 0.7
+      bird.wingPhase += delta * (bird.isGliding ? 1.5 : bird.wingSpeed)
+
+      let wingAngle
+      if (bird.isGliding) {
+        const glideTransition = Math.min(1, bird.glideTimer * 2)
+        const glideWing = 0.35 + Math.sin(bird.wingPhase) * 0.08
+        const flapWing = Math.sin(bird.wingPhase) * 0.6
+        wingAngle = flapWing + (glideWing - flapWing) * glideTransition
+      } else {
+        const rawFlap = Math.sin(bird.wingPhase)
+        const downStroke = rawFlap < 0 ? -Math.pow(-rawFlap, 0.7) : Math.pow(rawFlap, 1.3)
+        wingAngle = downStroke * 0.65
+      }
 
       if (bird.leftWing) bird.leftWing.rotation.x = wingAngle
       if (bird.rightWing) bird.rightWing.rotation.x = -wingAngle
+
+      const wingLift = bird.isGliding ? 0 : Math.sin(bird.wingPhase) * 0.03
+      bird.group.rotation.x = -floatY * 0.02 + wingLift
     }
   }
 
@@ -384,8 +424,8 @@ export class AnimalBuilder {
       const localX = Math.cos(fish.angle) * rx
       const localZ = Math.sin(fish.angle) * rz
 
-      const yBob = Math.sin(elapsed * 1.5 + fish.swimPhase) * 0.05
-      const yPos = fish.waterY + fish.depthY + yBob
+      const yBob = Math.sin(elapsed * 1.5 + fish.swimPhase) * 0.04
+      const yPos = fish.waterY + fish.depthOffset + yBob
 
       fish.group.position.set(localX, yPos, localZ)
 

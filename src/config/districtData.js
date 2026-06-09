@@ -380,7 +380,7 @@ export const districtConfig = {
         count: 8,
         color: 0xcc6633,
         speed: 0.8,
-        waterY: 0.05,
+        waterY: 0.04,
       },
       {
         id: 'fish002',
@@ -389,7 +389,7 @@ export const districtConfig = {
         count: 5,
         color: 0x33aa66,
         speed: 0.6,
-        waterY: -0.2,
+        waterY: -0.05,
       },
       {
         id: 'fish003',
@@ -398,7 +398,7 @@ export const districtConfig = {
         count: 4,
         color: 0xddaa22,
         speed: 1.0,
-        waterY: -0.15,
+        waterY: 0.0,
       },
     ],
   },
