@@ -217,8 +217,8 @@ export const districtConfig = {
   landscape: {
     lake: {
       id: 'ls001',
-      center: [-46, -40],
-      radii: [16, 12],
+      center: [-70, -68],
+      radii: [14, 10],
       depth: 3.5,
       depths: [
         { offset: [0, 0], radius: 6, depth: 3.5 },
@@ -229,19 +229,19 @@ export const districtConfig = {
       waterColor: 0x1a7b9a,
       shoreColor: 0x8b7d5e,
       circulation: {
-        inlet: [-54, -40],
-        outlet: [-38, -40],
+        inlet: [-82, -68],
+        outlet: [-60, -68],
         flowPath: [
-          [-54, -40], [-50, -44], [-46, -48], [-40, -50],
-          [-36, -46], [-36, -38], [-38, -34], [-42, -32],
-          [-48, -32], [-52, -36], [-54, -40],
+          [-82, -68], [-78, -72], [-74, -76], [-68, -78],
+          [-62, -76], [-58, -72], [-58, -64], [-60, -60],
+          [-64, -58], [-70, -58], [-76, -60], [-80, -64], [-82, -68],
         ],
       },
     },
     bridge: {
       id: 'ls002',
-      startPoint: [-58, -34],
-      endPoint: [-38, -48],
+      startPoint: [-82, -62],
+      endPoint: [-60, -76],
       width: 2.5,
       railingHeight: 1.0,
       woodColor: 0x8B6914,
@@ -249,7 +249,7 @@ export const districtConfig = {
     },
     swimmingArea: {
       id: 'ls003',
-      center: [-42, -50],
+      center: [-66, -80],
       size: [10, 8],
       orientation: Math.PI / 8,
       depths: [

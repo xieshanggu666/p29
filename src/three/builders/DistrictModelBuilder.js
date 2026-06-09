@@ -22,6 +22,7 @@ export class DistrictModelBuilder {
     }
     if (config.roads) {
       this.roadBuilder.buildFromConfig(config.roads)
+      this.landscapeBuilder.setRoadPaths(config.roads)
     }
     if (config.greenery) {
       this.greeneryBuilder.buildFromConfig(config.greenery)

@@ -8,6 +8,46 @@ export class LandscapeBuilder {
     this.scene.add(this.landscapeGroup)
     this.waterMeshes = []
     this.circulationParticles = []
+    this.roadPaths = []
+  }
+
+  setRoadPaths(roadPaths) {
+    this.roadPaths = roadPaths
+  }
+
+  _checkRoadOverlap(center, radii) {
+    if (!this.roadPaths || this.roadPaths.length === 0) return false
+    const cx = center[0]
+    const cz = center[1]
+    const rx = radii[0]
+    const rz = radii[1]
+    const margin = 4
+
+    for (const road of this.roadPaths) {
+      if (!road.path) continue
+      for (const pt of road.path) {
+        const dx = pt[0] - cx
+        const dz = pt[1] - cz
+        const ellipseDist = (dx * dx) / ((rx + margin) * (rx + margin)) + (dz * dz) / ((rz + margin) * (rz + margin))
+        if (ellipseDist <= 1) return true
+      }
+    }
+    return false
+  }
+
+  _resolveOverlap(center, radii) {
+    const offsets = [
+      [0, -15], [-15, 0], [15, 0], [0, 15],
+      [-15, -15], [15, -15], [-15, 15], [15, 15],
+      [0, -25], [-25, 0], [25, 0], [0, 25],
+    ]
+    for (const offset of offsets) {
+      const candidate = [center[0] + offset[0], center[1] + offset[1]]
+      if (!this._checkRoadOverlap(candidate, radii)) {
+        return candidate
+      }
+    }
+    return [center[0] - 30, center[1] - 30]
   }
 
   buildFromConfig(config) {
@@ -23,9 +63,14 @@ export class LandscapeBuilder {
   }
 
   createLake({ id, center, radii, depth, depths, waterColor, shoreColor, circulation }) {
+    let adjustedCenter = [...center]
+    if (this._checkRoadOverlap(center, radii)) {
+      adjustedCenter = this._resolveOverlap(center, radii)
+    }
+
     const group = new THREE.Group()
     group.name = `lake_${id}`
-    group.position.set(center[0], 0, center[1])
+    group.position.set(adjustedCenter[0], 0, adjustedCenter[1])
     group.userData = { interactive: true, landscapeId: id, category: 'lake' }
 
     this._createLakeBed(group, radii, depth, depths, shoreColor)
@@ -34,7 +79,7 @@ export class LandscapeBuilder {
     this._createEcologyZone(group, radii)
 
     if (circulation) {
-      this._createCirculationSystem(group, circulation, radii)
+      this._createCirculationSystem(group, adjustedCenter, circulation, radii)
     }
 
     this.landscapeGroup.add(group)
@@ -98,48 +143,52 @@ export class LandscapeBuilder {
 
   _createWaterSurface(group, radii, waterColor) {
     const segments = 48
+    const rings = 12
     const positions = []
     const indices = []
     const normals = []
     const uvs = []
+    const baseYValues = []
 
-    for (let i = 0; i <= segments; i++) {
-      for (let j = 0; j <= segments; j++) {
-        const u = j / segments
-        const v = i / segments
-        const x = (u - 0.5) * 2 * radii[0]
-        const z = (v - 0.5) * 2 * radii[1]
-        const nx = x / radii[0]
-        const nz = z / radii[1]
-        const inside = (nx * nx + nz * nz) <= 1
+    positions.push(0, -0.05, 0)
+    normals.push(0, 1, 0)
+    uvs.push(0.5, 0.5)
+    baseYValues.push(-0.05)
 
-        positions.push(x, inside ? -0.05 : 0, z)
+    for (let ring = 1; ring <= rings; ring++) {
+      const ringT = ring / rings
+      const rx = radii[0] * ringT
+      const rz = radii[1] * ringT
+
+      for (let seg = 0; seg <= segments; seg++) {
+        const angle = (seg / segments) * Math.PI * 2
+        const x = Math.cos(angle) * rx
+        const z = Math.sin(angle) * rz
+        const y = -0.05
+
+        positions.push(x, y, z)
         normals.push(0, 1, 0)
-        uvs.push(u, v)
+        uvs.push(0.5 + Math.cos(angle) * ringT * 0.5, 0.5 + Math.sin(angle) * ringT * 0.5)
+        baseYValues.push(y)
       }
     }
 
-    for (let i = 0; i < segments; i++) {
-      for (let j = 0; j < segments; j++) {
-        const a = i * (segments + 1) + j
+    for (let seg = 1; seg <= segments; seg++) {
+      indices.push(0, seg, seg + 1)
+    }
+
+    for (let ring = 1; ring < rings; ring++) {
+      const innerStart = 1 + (ring - 1) * (segments + 1)
+      const outerStart = 1 + ring * (segments + 1)
+
+      for (let seg = 0; seg < segments; seg++) {
+        const a = innerStart + seg
         const b = a + 1
-        const c = a + (segments + 1)
+        const c = outerStart + seg
         const d = c + 1
 
-        const ax = positions[a * 3], az = positions[a * 3 + 2]
-        const bx = positions[b * 3], bz = positions[b * 3 + 2]
-        const cx = positions[c * 3], cz = positions[c * 3 + 2]
-        const dx = positions[d * 3], dz = positions[d * 3 + 2]
-
-        const insideA = (ax / radii[0]) ** 2 + (az / radii[1]) ** 2 <= 1
-        const insideB = (bx / radii[0]) ** 2 + (bz / radii[1]) ** 2 <= 1
-        const insideC = (cx / radii[0]) ** 2 + (cz / radii[1]) ** 2 <= 1
-        const insideD = (dx / radii[0]) ** 2 + (dz / radii[1]) ** 2 <= 1
-
-        if (insideA && insideB && insideC && insideD) {
-          indices.push(a, c, b)
-          indices.push(b, c, d)
-        }
+        indices.push(a, c, b)
+        indices.push(b, c, d)
       }
     }
 
@@ -163,6 +212,7 @@ export class LandscapeBuilder {
     const mesh = new THREE.Mesh(geo, mat)
     mesh.name = 'waterSurface'
     mesh.userData = { interactive: true, landscapeId: group.userData.landscapeId, category: 'lake', isWater: true }
+    mesh.userData.baseYValues = new Float32Array(baseYValues)
     this.waterMeshes.push(mesh)
     group.add(mesh)
   }
@@ -281,19 +331,22 @@ export class LandscapeBuilder {
     }
   }
 
-  _createCirculationSystem(group, circulation, radii) {
+  _createCirculationSystem(group, lakeCenter, circulation, radii) {
     const { inlet, outlet, flowPath } = circulation
+    const cx = lakeCenter[0]
+    const cz = lakeCenter[1]
 
     if (inlet) {
-      this._createCirculationMarker(group, inlet, 0x4488ff, 'inlet')
+      this._createCirculationMarker(group, [inlet[0] - cx, inlet[1] - cz], 0x4488ff, 'inlet')
     }
 
     if (outlet) {
-      this._createCirculationMarker(group, outlet, 0x44ff88, 'outlet')
+      this._createCirculationMarker(group, [outlet[0] - cx, outlet[1] - cz], 0x44ff88, 'outlet')
     }
 
     if (flowPath) {
-      this._createFlowParticles(group, flowPath)
+      const localFlowPath = flowPath.map(p => [p[0] - cx, p[1] - cz])
+      this._createFlowParticles(group, localFlowPath)
     }
   }
 
@@ -903,18 +956,19 @@ export class LandscapeBuilder {
     for (const mesh of this.waterMeshes) {
       if (!mesh.geometry || !mesh.geometry.attributes.position) continue
       const positions = mesh.geometry.attributes.position
-      const rx = mesh.parent?.userData?.landscapeId ? 1 : 1
+      const baseYValues = mesh.userData.baseYValues
 
       for (let i = 0; i < positions.count; i++) {
         const x = positions.getX(i)
         const z = positions.getZ(i)
-        const baseY = -0.05
+        const baseY = baseYValues ? baseYValues[i] : -0.05
         const wave = Math.sin(elapsed * 1.5 + x * 0.3) * 0.03
             + Math.sin(elapsed * 0.8 + z * 0.4) * 0.02
             + Math.cos(elapsed * 1.2 + x * 0.2 + z * 0.3) * 0.015
         positions.setY(i, baseY + wave)
       }
       positions.needsUpdate = true
+      mesh.geometry.computeVertexNormals()
     }
 
     for (const particle of this.circulationParticles) {
