@@ -208,26 +208,32 @@ export class AnimalBuilder {
       rightEye.position.set(0.22, 0.04, -0.06)
       fishGroup.add(rightEye)
 
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5
-      const radiusFactor = 0.3 + Math.random() * 0.5
+      const rx = radii[0] * (0.3 + Math.random() * 0.5)
+      const rz = radii[1] * (0.3 + Math.random() * 0.5)
       const depthOffset = -(0.05 + Math.random() * 0.2)
       const fishSpeed = speed * (0.7 + Math.random() * 0.6)
 
+      const pathPoints = this._generateFishPath(rx, rz, 6 + Math.floor(Math.random() * 4))
+
       fishDataList.push({
         group: fishGroup,
-        center: [0, 0],
-        radii,
-        angle,
-        radiusFactor,
-        depthOffset,
+        tailMesh: tail,
+        leftPecFinMesh: leftPecFin,
+        rightPecFinMesh: rightPecFin,
+        path: pathPoints,
+        progress: Math.random(),
         speed: fishSpeed,
+        depthOffset,
+        waterY,
         tailPhase: Math.random() * Math.PI * 2,
         swimPhase: Math.random() * Math.PI * 2,
-        waterY,
-        turnSpeed: 0.3 + Math.random() * 0.4,
-        schoolId: id,
-        directionChangeTimer: Math.random() * 5,
-        currentRadiusFactor: radiusFactor,
+        dartTimer: 2 + Math.random() * 5,
+        isDarting: false,
+        dartDuration: 0,
+        baseSpeed: fishSpeed,
+        prevDir: new THREE.Vector3(1, 0, 0),
+        bankAngle: 0,
+        pitchAngle: 0,
       })
 
       group.add(fishGroup)
@@ -236,6 +242,22 @@ export class AnimalBuilder {
     this.fishSchools.push(...fishDataList)
     this.animalGroup.add(group)
     return group
+  }
+
+  _generateFishPath(rx, rz, numPoints) {
+    const points = []
+    for (let i = 0; i < numPoints; i++) {
+      const baseAngle = (i / numPoints) * Math.PI * 2
+      const jitterR = 0.7 + Math.random() * 0.6
+      const jitterA = (Math.random() - 0.5) * 0.4
+      const a = baseAngle + jitterA
+      points.push(new THREE.Vector3(
+        Math.cos(a) * rx * jitterR,
+        0,
+        Math.sin(a) * rz * jitterR
+      ))
+    }
+    return new THREE.CatmullRomCurve3(points, true)
   }
 
   _createBirdGeometry() {
@@ -408,52 +430,61 @@ export class AnimalBuilder {
 
   _updateFish(delta, elapsed) {
     for (const fish of this.fishSchools) {
-      fish.angle += delta * fish.speed * fish.turnSpeed
-
-      fish.directionChangeTimer -= delta
-      if (fish.directionChangeTimer <= 0) {
-        fish.currentRadiusFactor += (Math.random() - 0.5) * 0.3
-        fish.currentRadiusFactor = Math.max(0.15, Math.min(0.85, fish.currentRadiusFactor))
-        fish.turnSpeed = 0.3 + Math.random() * 0.4
-        fish.directionChangeTimer = 3 + Math.random() * 5
+      fish.dartTimer -= delta
+      if (!fish.isDarting && fish.dartTimer <= 0) {
+        fish.isDarting = true
+        fish.dartDuration = 0.4 + Math.random() * 0.8
+        fish.speed = fish.baseSpeed * (2.5 + Math.random())
+      }
+      if (fish.isDarting) {
+        fish.dartDuration -= delta
+        if (fish.dartDuration <= 0) {
+          fish.isDarting = false
+          fish.speed = fish.baseSpeed
+          fish.dartTimer = 2 + Math.random() * 6
+        }
       }
 
-      const rx = fish.radii[0] * fish.currentRadiusFactor
-      const rz = fish.radii[1] * fish.currentRadiusFactor
+      fish.progress += delta * fish.speed * 0.015
+      if (fish.progress >= 1) fish.progress -= 1
 
-      const localX = Math.cos(fish.angle) * rx
-      const localZ = Math.sin(fish.angle) * rz
+      const t = Math.max(0.001, Math.min(0.999, fish.progress))
+      const point = fish.path.getPointAt(t)
+      const tangent = fish.path.getTangentAt(t)
 
-      const yBob = Math.sin(elapsed * 1.5 + fish.swimPhase) * 0.04
-      const yPos = fish.waterY + fish.depthOffset + yBob
+      const yBob = Math.sin(elapsed * 1.2 + fish.swimPhase) * 0.04
+        + Math.sin(elapsed * 0.7 + fish.swimPhase * 1.3) * 0.02
+      const dartY = fish.isDarting ? -0.08 : 0
+      const yPos = fish.waterY + fish.depthOffset + yBob + dartY
 
-      fish.group.position.set(localX, yPos, localZ)
+      fish.group.position.set(point.x, yPos, point.z)
 
-      const nextAngle = fish.angle + 0.01
-      const nextX = Math.cos(nextAngle) * rx
-      const nextZ = Math.sin(nextAngle) * rz
-      const dirX = nextX - localX
-      const dirZ = nextZ - localZ
-      const facing = Math.atan2(dirX, dirZ)
+      const dir = tangent.clone().normalize()
+      const facing = Math.atan2(dir.x, dir.z)
       fish.group.rotation.y = facing
 
-      fish.tailPhase += delta * fish.speed * 8
-      const tailSwing = Math.sin(fish.tailPhase) * 0.4
+      if (fish.prevDir.lengthSq() > 0) {
+        const crossY = fish.prevDir.x * dir.z - fish.prevDir.z * dir.x
+        const dot = fish.prevDir.dot(dir)
+        const turnRate = Math.atan2(crossY, dot)
+        const targetBank = turnRate * 4
+        fish.bankAngle += (targetBank - fish.bankAngle) * Math.min(1, delta * 4)
+      }
+      fish.prevDir.copy(dir)
 
-      fish.group.traverse((child) => {
-        if (child.name === 'fishTail') {
-          child.rotation.y = tailSwing
-        }
-        if (child.name === 'leftPecFin') {
-          child.rotation.z = Math.sin(fish.tailPhase * 0.8) * 0.3
-        }
-        if (child.name === 'rightPecFin') {
-          child.rotation.z = -Math.sin(fish.tailPhase * 0.8) * 0.3
-        }
-      })
+      const targetPitch = fish.isDarting ? -0.15 : 0
+      fish.pitchAngle += (targetPitch - fish.pitchAngle) * Math.min(1, delta * 5)
 
-      const bodyRoll = Math.sin(fish.tailPhase) * 0.03
-      fish.group.rotation.z = bodyRoll
+      const tailSpeed = fish.isDarting ? fish.speed * 14 : fish.speed * 8
+      fish.tailPhase += delta * tailSpeed
+      const tailSwing = Math.sin(fish.tailPhase) * (fish.isDarting ? 0.6 : 0.4)
+
+      fish.tailMesh.rotation.y = tailSwing
+      fish.leftPecFinMesh.rotation.z = Math.sin(fish.tailPhase * 0.8) * 0.35
+      fish.rightPecFinMesh.rotation.z = -Math.sin(fish.tailPhase * 0.8) * 0.35
+
+      fish.group.rotation.z = fish.bankAngle + Math.sin(fish.tailPhase) * 0.04
+      fish.group.rotation.x = fish.pitchAngle
     }
   }
 

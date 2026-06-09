@@ -160,3 +160,20 @@
    - 滑翔过渡：拍打→滑翔平滑过渡(interpolation)，不是突然切换
    - 俯仰(pitch)：浮动位移的微分 + 翅膀升力微调，而非固定正弦
    - 每只鸟独立的滑翔/拍打切换周期，避免鸟群同步
+
+### 2026-06-09 修复页面卡顿 & 鱼转圈问题
+1. **性能优化：BuildingBuilder 窗户系统重写**
+   - 根因：每个窗户创建2个独立Mesh(窗框+面板)，8栋建筑产生数千个draw call导致严重卡顿
+   - 解决：改用 InstancedBufferGeometry，每栋建筑仅2个draw call(窗框实例+面板实例)
+   - 移除逐楼层Line线条(floor lines)和阳台(balconies)，减少对象数
+   - updateAnimation 从 traverse 遍历改为 _roofLights 数组直接引用，避免每帧遍历
+
+2. **鱼动画重写：从固定圆圈改为路径游动**
+   - 根因：鱼用 angle+=delta*speed*turnSpeed 做椭圆运动，视觉上就是围着一点转圈
+   - 解决：改为 CatmullRomCurve3 曲线路径（6~9个控制点，带随机抖动），闭合曲线
+   - 新增"突冲"(dart)行为：2~8秒触发一次，速度提升2.5~3.5倍，持续0.4~1.2秒
+   - 突冲时尾巴摆动加快(14x vs 8x)、幅度增大(0.6 vs 0.4)、身体下俯(pitch=-0.15)
+   - 新增转弯侧倾(bank)：类似飞鸟，根据路径切线变化率计算侧倾角
+   - 新增俯仰(pitch)：突冲时下俯，平时归零
+   - Y轴浮动改为双频叠加
+   - 去掉 traverse 查找子对象，改为直接引用 tailMesh/leftPecFinMesh/rightPecFinMesh

@@ -7,6 +7,7 @@ export class BuildingBuilder {
     this.buildingGroup.name = 'buildings'
     this.scene.add(this.buildingGroup)
     this.materials = this._createMaterials()
+    this._roofLights = []
   }
 
   _createMaterials() {
@@ -112,16 +113,11 @@ export class BuildingBuilder {
     body.userData = { interactive: true, buildingId: id, buildingName: name, buildingType: type, buildingInfo: info, floors }
     group.add(body)
 
-    this._addFloorLines(group, width, height, depth, floors)
-    this._addWindowDetails(group, width, height, depth, floors, type)
+    this._addMergedWindows(group, width, height, depth, floors, type)
 
     if (type === 'commercial' || type === 'office') {
       this._addGlassFacade(group, width, height, depth)
-      this._addFacadeAccent(group, width, height, depth, type)
-    }
-
-    if (type === 'residential') {
-      this._addBalconies(group, width, height, depth, floors)
+      this._addFacadeAccent(group, width, height, depth)
     }
 
     this._addRoof(group, width, height, depth, type)
@@ -155,39 +151,14 @@ export class BuildingBuilder {
       0,1,0,   0,1,0,   0,1,0,   0,1,0,
     ])
 
-    const uvs = new Float32Array([
-      0,0,  width/4,0,  width/4,height/4,  0,height/4,
-      0,0,  width/4,0,  width/4,height/4,  0,height/4,
-    ])
-
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
-    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
     geo.setIndex(indices)
     geo.computeVertexNormals()
     return geo
   }
 
-  _addFloorLines(group, width, height, depth, floors) {
-    const hw = width / 2 + 0.02
-    const hd = depth / 2 + 0.02
-    const lineMat = new THREE.LineBasicMaterial({ color: 0x222233, transparent: true, opacity: 0.5 })
-
-    for (let i = 1; i < floors; i++) {
-      const y = i * 3
-      const points = [
-        new THREE.Vector3(-hw, y, -hd),
-        new THREE.Vector3( hw, y, -hd),
-        new THREE.Vector3( hw, y,  hd),
-        new THREE.Vector3(-hw, y,  hd),
-        new THREE.Vector3(-hw, y, -hd),
-      ]
-      const lineGeo = new THREE.BufferGeometry().setFromPoints(points)
-      group.add(new THREE.Line(lineGeo, lineMat))
-    }
-  }
-
-  _addWindowDetails(group, width, height, depth, floors, type) {
+  _addMergedWindows(group, width, height, depth, floors, type) {
     const hw = width / 2 + 0.06
     const hd = depth / 2 + 0.06
     const floorHeight = 3
@@ -195,8 +166,8 @@ export class BuildingBuilder {
     const windowHeight = type === 'residential' ? 1.2 : 1.6
     const windowDepth = 0.08
 
-    const windowFrameGeo = new THREE.BoxGeometry(windowWidth + 0.1, windowHeight + 0.1, windowDepth)
-    const windowPaneGeo = new THREE.BoxGeometry(windowWidth, windowHeight, windowDepth * 0.5)
+    const frameGeo = new THREE.BoxGeometry(windowWidth + 0.1, windowHeight + 0.1, windowDepth)
+    const paneGeo = new THREE.BoxGeometry(windowWidth, windowHeight, windowDepth * 0.5)
 
     const sides = [
       { axis: 'z', sign: 1, pos: [0, 0, hd], rotY: 0 },
@@ -205,38 +176,74 @@ export class BuildingBuilder {
       { axis: 'x', sign: -1, pos: [-hw, 0, 0], rotY: -Math.PI / 2 },
     ]
 
+    const frameMatrices = []
+    const paneMatrices = []
+
+    const tempMatrix = new THREE.Matrix4()
+    const rotationMatrix = new THREE.Matrix4()
+
     for (const side of sides) {
       const sideWidth = side.axis === 'z' ? width : depth
       const windowsPerFloor = Math.max(1, Math.floor(sideWidth / (windowWidth + 0.6)))
       const spacing = sideWidth / (windowsPerFloor + 1)
       const startOffset = -sideWidth / 2 + spacing
 
+      rotationMatrix.makeRotationY(side.rotY)
+
       for (let floor = 0; floor < floors; floor++) {
         const yBase = floor * floorHeight + floorHeight * 0.35
 
         for (let w = 0; w < windowsPerFloor; w++) {
           const offset = startOffset + w * spacing
-          const frame = new THREE.Mesh(windowFrameGeo, this.materials.windowFrame)
-          const pane = new THREE.Mesh(windowPaneGeo, this.materials.windowGlow)
-
           const localX = side.axis === 'z' ? offset : 0
           const localZ = side.axis === 'x' ? offset : 0
 
-          frame.position.set(
+          tempMatrix.makeTranslation(
             localX + side.pos[0],
             yBase + windowHeight / 2,
             localZ + side.pos[2]
           )
-          frame.rotation.y = side.rotY
-          frame.castShadow = true
-          group.add(frame)
+          tempMatrix.premultiply(rotationMatrix)
+          frameMatrices.push(tempMatrix.clone())
 
-          pane.position.copy(frame.position)
-          pane.position.z += 0.02 * side.sign
-          pane.rotation.y = side.rotY
-          group.add(pane)
+          tempMatrix.makeTranslation(
+            localX + side.pos[0],
+            yBase + windowHeight / 2,
+            localZ + side.pos[2] + 0.02 * side.sign
+          )
+          tempMatrix.premultiply(rotationMatrix)
+          paneMatrices.push(tempMatrix.clone())
         }
       }
+    }
+
+    if (frameMatrices.length > 0) {
+      const mergedFrameGeo = new THREE.BufferGeometry()
+      const frameInstancedGeo = new THREE.InstancedBufferGeometry()
+      frameInstancedGeo.index = frameGeo.index
+      frameInstancedGeo.attributes.position = frameGeo.attributes.position
+      frameInstancedGeo.attributes.normal = frameGeo.attributes.normal
+      for (let i = 0; i < frameMatrices.length; i++) {
+        frameInstancedGeo.setMatrixAt(i, frameMatrices[i])
+      }
+      frameInstancedGeo.instanceMatrix.needsUpdate = true
+      frameInstancedGeo.instanceCount = frameMatrices.length
+
+      const frameMesh = new THREE.Mesh(frameInstancedGeo, this.materials.windowFrame)
+      group.add(frameMesh)
+
+      const paneInstancedGeo = new THREE.InstancedBufferGeometry()
+      paneInstancedGeo.index = paneGeo.index
+      paneInstancedGeo.attributes.position = paneGeo.attributes.position
+      paneInstancedGeo.attributes.normal = paneGeo.attributes.normal
+      for (let i = 0; i < paneMatrices.length; i++) {
+        paneInstancedGeo.setMatrixAt(i, paneMatrices[i])
+      }
+      paneInstancedGeo.instanceMatrix.needsUpdate = true
+      paneInstancedGeo.instanceCount = paneMatrices.length
+
+      const paneMesh = new THREE.Mesh(paneInstancedGeo, this.materials.windowGlow)
+      group.add(paneMesh)
     }
   }
 
@@ -248,64 +255,30 @@ export class BuildingBuilder {
     group.add(glass)
   }
 
-  _addFacadeAccent(group, width, height, depth, type) {
+  _addFacadeAccent(group, width, height, depth) {
     const accentMat = this.materials.accent
 
     const cornerGeo = new THREE.BoxGeometry(0.15, height, 0.15)
     const hw = width / 2 + 0.06
     const hd = depth / 2 + 0.06
     const corners = [
-      [-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd],
+      [-hw, height / 2, -hd], [hw, height / 2, -hd],
+      [hw, height / 2, hd], [-hw, height / 2, hd],
     ]
     for (const pos of corners) {
       const corner = new THREE.Mesh(cornerGeo, accentMat)
-      corner.position.set(pos[0], height / 2, pos[2])
+      corner.position.set(pos[0], pos[1], pos[2])
       corner.castShadow = true
       group.add(corner)
     }
 
     const horizontalGeo = new THREE.BoxGeometry(width + 0.12, 0.12, depth + 0.12)
-    const positions = [0, height, height * 0.5]
-    for (const y of positions) {
+    const bandPositions = [0, height, height * 0.5]
+    for (const y of bandPositions) {
       const band = new THREE.Mesh(horizontalGeo, accentMat)
       band.position.y = y
       band.castShadow = true
       group.add(band)
-    }
-  }
-
-  _addBalconies(group, width, height, depth, floors) {
-    const balconyMat = new THREE.MeshStandardMaterial({
-      color: 0x998877,
-      roughness: 0.7,
-      metalness: 0.1,
-    })
-    const railingMat = new THREE.MeshStandardMaterial({
-      color: 0x666677,
-      roughness: 0.4,
-      metalness: 0.5,
-    })
-
-    const hw = width / 2
-    const hd = depth / 2
-
-    for (let floor = 1; floor < floors; floor += 2) {
-      const y = floor * 3
-
-      for (const side of [{ x: hw + 0.3, z: 0, rotY: Math.PI / 2 }, { x: -hw - 0.3, z: 0, rotY: -Math.PI / 2 }]) {
-        const slabGeo = new THREE.BoxGeometry(0.6, 0.08, depth * 0.8)
-        const slab = new THREE.Mesh(slabGeo, balconyMat)
-        slab.position.set(side.x, y, side.z)
-        slab.castShadow = true
-        slab.receiveShadow = true
-        group.add(slab)
-
-        const railGeo = new THREE.BoxGeometry(0.04, 0.5, depth * 0.8)
-        const rail = new THREE.Mesh(railGeo, railingMat)
-        const railOffset = side.x > 0 ? 0.3 : -0.3
-        rail.position.set(side.x + railOffset, y + 0.29, side.z)
-        group.add(rail)
-      }
     }
   }
 
@@ -368,8 +341,8 @@ export class BuildingBuilder {
     })
     const light = new THREE.Mesh(lightGeo, lightMat)
     light.position.set(0, peakY + 3.1, 0)
-    light.name = 'roofLight'
     group.add(light)
+    this._roofLights.push(light)
 
     const acGeo = new THREE.BoxGeometry(1.5, 0.5, 1.0)
     const acMat = new THREE.MeshStandardMaterial({
@@ -399,14 +372,13 @@ export class BuildingBuilder {
   }
 
   updateAnimation(elapsed) {
-    this.buildingGroup.traverse((child) => {
-      if (child.name === 'roofLight') {
-        child.material.emissiveIntensity = 0.3 + Math.sin(elapsed * 2) * 0.3
-      }
-    })
+    for (const light of this._roofLights) {
+      light.material.emissiveIntensity = 0.3 + Math.sin(elapsed * 2) * 0.3
+    }
   }
 
   dispose() {
+    this._roofLights = []
     this.buildingGroup.traverse((child) => {
       if (child.geometry) child.geometry.dispose()
       if (child.material) {
