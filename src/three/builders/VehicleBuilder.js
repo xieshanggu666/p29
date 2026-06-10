@@ -231,15 +231,17 @@ export class VehicleBuilder {
       clearcoatRoughness: 0.15,
     })
     const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0xaaddff,
-      roughness: 0.02,
+      color: 0x88bbdd,
+      roughness: 0.05,
       metalness: 0.0,
-      transmission: 0.85,
+      transmission: 0.6,
       transparent: true,
-      opacity: 0.4,
-      reflectivity: 0.9,
+      opacity: 0.5,
+      reflectivity: 0.8,
       ior: 1.5,
-      thickness: 0.02,
+      thickness: 0.01,
+      depthWrite: false,
+      side: THREE.DoubleSide,
     })
     const tireMat = new THREE.MeshStandardMaterial({ 
       color: 0x1a1a1a, 
@@ -334,7 +336,7 @@ export class VehicleBuilder {
 
     const cabin = new THREE.Mesh(this._carGeo.sedanCabin, glassMat)
     cabin.position.set(0, 1.0, 0.2)
-    cabin.renderOrder = 2
+    cabin.renderOrder = 3
     group.add(cabin)
 
     const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.35, [
@@ -370,7 +372,7 @@ export class VehicleBuilder {
 
     const cabin = new THREE.Mesh(this._carGeo.suvCabin, glassMat)
     cabin.position.set(0, 1.2, 0)
-    cabin.renderOrder = 2
+    cabin.renderOrder = 3
     group.add(cabin)
 
     const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.4, [
@@ -406,7 +408,7 @@ export class VehicleBuilder {
 
     const cabin = new THREE.Mesh(this._carGeo.vanCabin, glassMat)
     cabin.position.set(0, 1.45, 1.2)
-    cabin.renderOrder = 2
+    cabin.renderOrder = 3
     group.add(cabin)
 
     const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.4, [
@@ -571,46 +573,55 @@ export class VehicleBuilder {
       color: 0x1a1a1a,
       roughness: 0.8,
       metalness: 0.0,
+      depthWrite: true,
     })
     const seatMat = new THREE.MeshStandardMaterial({
       color: 0x2a2a3a,
       roughness: 0.7,
       metalness: 0.0,
+      depthWrite: true,
     })
     const steeringMat = new THREE.MeshStandardMaterial({
       color: 0x1a1a1a,
       roughness: 0.5,
       metalness: 0.1,
+      depthWrite: true,
     })
     const dashMat = new THREE.MeshStandardMaterial({
       color: 0x333333,
       roughness: 0.6,
       metalness: 0.1,
+      depthWrite: true,
     })
     const plateMat = new THREE.MeshStandardMaterial({
       color: 0xeeeeee,
       roughness: 0.5,
       metalness: 0.0,
+      depthWrite: true,
     })
 
     const driverSeat = new THREE.Mesh(this._carGeo.seat, seatMat)
     driverSeat.position.set(-0.25, seatY, 0.3)
     driverSeat.name = 'driverSeat'
+    driverSeat.renderOrder = 0
     group.add(driverSeat)
 
     const driverSeatBack = new THREE.Mesh(this._carGeo.seatBack, seatMat)
     driverSeatBack.position.set(-0.25, seatY + 0.25, 0.1)
     driverSeatBack.name = 'driverSeatBack'
+    driverSeatBack.renderOrder = 0
     group.add(driverSeatBack)
 
     const passengerSeat = new THREE.Mesh(this._carGeo.seat, seatMat)
     passengerSeat.position.set(0.25, seatY, 0.3)
     passengerSeat.name = 'passengerSeat'
+    passengerSeat.renderOrder = 0
     group.add(passengerSeat)
 
     const passengerSeatBack = new THREE.Mesh(this._carGeo.seatBack, seatMat)
     passengerSeatBack.position.set(0.25, seatY + 0.25, 0.1)
     passengerSeatBack.name = 'passengerSeatBack'
+    passengerSeatBack.renderOrder = 0
     group.add(passengerSeatBack)
 
     const rearSeats = []
@@ -619,11 +630,13 @@ export class VehicleBuilder {
       rearSeat.position.set(-0.25 + i * seatSpacing, seatY, -0.6)
       rearSeat.scale.z = 0.8
       rearSeat.name = `rearSeat_${i}`
+      rearSeat.renderOrder = 0
       group.add(rearSeat)
 
       const rearSeatBack = new THREE.Mesh(this._carGeo.seatBack, seatMat)
       rearSeatBack.position.set(-0.25 + i * seatSpacing, seatY + 0.25, -0.8)
       rearSeatBack.name = `rearSeatBack_${i}`
+      rearSeatBack.renderOrder = 0
       group.add(rearSeatBack)
 
       rearSeats.push({ seat: rearSeat, back: rearSeatBack })
@@ -633,16 +646,19 @@ export class VehicleBuilder {
     steeringWheel.position.set(-0.28, seatY + 0.35, 0.55)
     steeringWheel.rotation.x = -Math.PI / 4
     steeringWheel.name = 'steeringWheel'
+    steeringWheel.renderOrder = 0
     group.add(steeringWheel)
 
     const dashboard = new THREE.Mesh(this._carGeo.dashboard, dashMat)
     dashboard.position.set(0, seatY + 0.15, 0.7)
     dashboard.name = 'dashboard'
+    dashboard.renderOrder = 0
     group.add(dashboard)
 
     const rearPlate = new THREE.Mesh(this._carGeo.licensePlate, plateMat)
     rearPlate.position.set(0, floorY + 0.08, -1.52)
     rearPlate.name = 'licensePlate'
+    rearPlate.renderOrder = 0
     group.add(rearPlate)
 
     return {
@@ -1064,17 +1080,65 @@ export class VehicleBuilder {
   }
 
   _checkCarDistances() {
+    const minDist = 6
+    const decelFactor = 0.003
+    const accelThreshold = 8
     for (let i = 0; i < this.cars.length; i++) {
       for (let j = i + 1; j < this.cars.length; j++) {
-        const posA = this.cars[i].group.position
-        const posB = this.cars[j].group.position
+        const carA = this.cars[i]
+        const carB = this.cars[j]
+        const posA = carA.group.position
+        const posB = carB.group.position
         const dist = posA.distanceTo(posB)
-        if (dist < 4) {
-          const adjustment = 0.005 * this.cars[j].direction
-          this.cars[j].progress += adjustment
-          if (this.cars[j].closed) {
-            if (this.cars[j].progress >= 1) this.cars[j].progress -= 1
-            if (this.cars[j].progress < 0) this.cars[j].progress += 1
+
+        if (dist < minDist) {
+          const diff = new THREE.Vector3().subVectors(posB, posA).normalize()
+          const tangentA = carA.curve.getTangentAt(Math.max(0.002, Math.min(0.998, carA.progress)))
+          const dirA = new THREE.Vector3().copy(tangentA).multiplyScalar(carA.direction)
+
+          const tangentB = carB.curve.getTangentAt(Math.max(0.002, Math.min(0.998, carB.progress)))
+          const dirB = new THREE.Vector3().copy(tangentB).multiplyScalar(carB.direction)
+
+          const dotA = diff.dot(dirA)
+          const dotB = diff.dot(dirB)
+
+          if (dotA > 0) {
+            carA.progress -= decelFactor * carA.direction
+          }
+          if (dotB < 0) {
+            carB.progress += decelFactor * carB.direction
+          }
+
+          const separation = (minDist - dist) * 0.02
+          carA.group.position.x -= diff.x * separation
+          carA.group.position.z -= diff.z * separation
+          carB.group.position.x += diff.x * separation
+          carB.group.position.z += diff.z * separation
+
+          if (carA.closed) {
+            if (carA.progress >= 1) carA.progress -= 1
+            if (carA.progress < 0) carA.progress += 1
+          } else {
+            carA.progress = Math.max(0, Math.min(1, carA.progress))
+          }
+          if (carB.closed) {
+            if (carB.progress >= 1) carB.progress -= 1
+            if (carB.progress < 0) carB.progress += 1
+          } else {
+            carB.progress = Math.max(0, Math.min(1, carB.progress))
+          }
+        } else if (dist < accelThreshold) {
+          const recovery = (dist - minDist) / (accelThreshold - minDist)
+          const adjustment = decelFactor * 0.5 * (1 - recovery)
+          carA.progress += adjustment * carA.direction
+          carB.progress += adjustment * carB.direction
+          if (carA.closed) {
+            if (carA.progress >= 1) carA.progress -= 1
+            if (carA.progress < 0) carA.progress += 1
+          }
+          if (carB.closed) {
+            if (carB.progress >= 1) carB.progress -= 1
+            if (carB.progress < 0) carB.progress += 1
           }
         }
       }
