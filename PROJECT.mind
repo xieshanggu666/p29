@@ -247,3 +247,73 @@
 - **可维护性**：粒子动画逻辑在 JS 中，更易调试和修改
 - **云朵视觉**：从点云(BufferGeometry + 50个点)改为球体组合(Group + SphereGeometry)，更真实
 - **资源释放**：_clearParticleSystems 支持 Group 类型的递归 dispose
+
+### 2026-06-10 车辆模型渲染与动画全面修复
+
+#### Bug 1：轮胎模型若隐若现（z-fighting）
+
+- **问题现象**：轮胎在渲染时出现闪烁、半透明、若隐若现的现象，视角变化时尤为明显
+- **根因分析**：
+  - 轮胎(tire)、轮辋(rim)、轮毂(hub)三个 `CylinderGeometry` 高度互相重叠：tire=0.25, rim=0.26, hub=0.28
+  - 三个圆柱体共享相同的空间区域，GPU 深度缓冲无法区分前后关系，产生 z-fighting
+  - 轮胎和轮辋均使用 `openEnded=true`（开放式圆柱），无端面封盖，从侧面可以看到内部空心结构
+  - 轮辋(0.6半径)与轮胎(1.0半径)在开放端面处重叠
+- **修复方案**：
+  - 轮胎改为闭口圆柱 (`openEnded=false`)，高度从 0.25 降至 0.22，分段从 4 降至 1
+  - 轮辋改为闭口圆柱 (`openEnded=false`)，半径从 0.6 降至 0.55，高度从 0.26 降至 0.24
+  - 轮毂改为闭口圆柱 (`openEnded=false`)，半径从 0.15 增至 0.2，高度从 0.28 降至 0.26
+  - 为每个圆柱层添加独立的侧面封盖圆盘 (`CircleGeometry`)，放在 y=halfHeight 处，彻底消除空心穿透
+  - 缩放方式改为 `scale.set(tireScale, 1, tireScale)` + `rotation.z=Math.PI/2`，使 XZ 平面为轮胎平面、Y 轴为轴心
+  - 三个层级端面错开：halfTire=0.11, halfRim=0.12, halfHub=0.13，从内到外递进
+
+#### Bug 2：车辆内部座位模型缺失
+
+- **问题现象**：透过车窗玻璃可以看到车内完全空白，没有任何内饰组件
+- **根因分析**：`createCar` 和各 `_buildXxx` 方法中只创建了车身、车窗、车轮、灯等外部组件，从未添加内饰
+- **修复方案**：新增 `_addInterior` 方法，为每种车型添加完整内饰
+  - 驾驶座和副驾驶座：`BoxGeometry` 变形座椅底座 + 独立靠背
+  - 后排座椅：根据车型数量不同（sedan=2, suv=3, van=2）
+  - 方向盘：`TorusGeometry`，倾斜 -π/4 角度
+  - 仪表台：`BoxGeometry`
+  - 后车牌：白色 `BoxGeometry`
+  - 内饰材质：深色系 MeshStandardMaterial（seat 0x2a2a3a, dash 0x333333）
+
+#### Bug 3：整体模型细节粗糙
+
+- **问题现象**：车辆模型缺少底盘、轮拱等结构，从底部或侧面观看时穿帮
+- **修复方案**：
+  - 新增 `_addUnderbody` 方法：深色底盘板 (`BoxGeometry 1.3×0.05×3.0`)，根据车型缩放
+  - 新增 `_addWheelWells` 方法：4个半圆形轮拱 (`ExtrudeGeometry` + `absarc`)，前后各2个
+  - 车轮 X 坐标从 ±0.65 调整为 ±0.7/±0.8/±0.85，使车轮略宽于车身，更真实
+  - 车身和车窗添加 `renderOrder`（body=1, cabin=2），确保透明车窗正确渲染
+
+#### Bug 4：车辆运动时闪烁
+
+- **问题现象**：车辆沿路径行驶时出现位置跳变和旋转闪烁，尤其在路径拐弯处明显
+- **根因分析**：
+  1. `delta` 未做上限裁剪，帧率波动时单帧位移过大导致位置跳变
+  2. 旋转角度直接赋值 `car.group.rotation.y = angle`，当 `atan2` 从 π 跳到 -π 时产生 2π 的瞬间翻转
+  3. 位置直接 `copy(point)`，无平滑过渡，帧间抖动明显
+  4. `_checkCarDistances` 每次调整 progress=0.02，步长过大导致车距避让时产生抖动
+- **修复方案**：
+  - 新增 `const clampedDelta = Math.min(delta, 0.05)` 裁剪最大帧时间，防止帧率波动导致位移过大
+  - 路径参数 t 边界从 `0.001~0.999` 调整为 `0.002~0.998`，进一步远离路径端点避免切线计算不稳定
+  - 新增 `_lerpAngle` 方法：角度平滑插值，处理 ±π 边界跨越，消除旋转跳变
+  - 车辆旋转：`rotation.y = _lerpAngle(current, target, delta*6)`，因子6确保响应灵敏但无跳变
+  - 行人旋转：同样使用 `_lerpAngle`，因子8略快于车辆
+  - 车辆位置：从直接 copy 改为逐轴平滑插值 `pos.x += (target.x - pos.x) * smoothFactor`，smoothFactor = min(1, delta*10)
+  - 车距避让步长从 0.02 降至 0.005，减少单帧位移幅度
+
+#### 新增几何体清单
+
+- `wheelTireSide` - 轮胎端面封盖圆盘
+- `wheelRimSide` - 轮辋端面封盖圆盘
+- `wheelHubCapSide` - 轮毂端面封盖圆盘
+- `underbody` - 底盘板
+- `seat` - 座椅底座（变形BoxGeometry）
+- `seatBack` - 座椅靠背
+- `steeringWheel` - 方向盘（TorusGeometry）
+- `dashboard` - 仪表台
+- `wheelWellFront/Rear` - 前后轮拱（半圆ExtrudeGeometry）
+- `exhaust` - 排气管
+- `licensePlate` - 车牌
