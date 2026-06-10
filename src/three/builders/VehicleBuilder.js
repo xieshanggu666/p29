@@ -37,43 +37,150 @@ export class VehicleBuilder {
     }
 
     const bodyColor = new THREE.Color(color)
-    const skinColors = [0xf5d0a9, 0xd4a574, 0x8d5524, 0xc68642]
+    const skinColors = [0xf5d0a9, 0xd4a574, 0x8d5524, 0xc68642, 0xe0ac69, 0xf1c27d]
     const skinColor = skinColors[Math.floor(Math.random() * skinColors.length)]
+    const hairColors = [0x1a1a1a, 0x3d2314, 0x5c3a21, 0x8b6914, 0x9a7b4f, 0xc0c0c0]
+    const hairColor = hairColors[Math.floor(Math.random() * hairColors.length)]
+    const pantColors = [0x222244, 0x2f4f4f, 0x3d3d3d, 0x4a3728, 0x1a1a2e]
+    const pantColor = pantColors[Math.floor(Math.random() * pantColors.length)]
+    const shoeColors = [0x1a1a1a, 0x2d2d2d, 0x4a3728, 0x5c4033]
+    const shoeColor = shoeColors[Math.floor(Math.random() * shoeColors.length)]
 
-    const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.7 })
-    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
-    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x222244, roughness: 0.8 })
+    const bodyMat = new THREE.MeshStandardMaterial({ 
+      color: bodyColor, 
+      roughness: 0.65,
+      metalness: 0.05,
+    })
+    const skinMat = new THREE.MeshPhysicalMaterial({ 
+      color: skinColor, 
+      roughness: 0.45,
+      metalness: 0.0,
+      clearcoat: 0.15,
+      clearcoatRoughness: 0.6,
+    })
+    const hairMat = new THREE.MeshStandardMaterial({ 
+      color: hairColor, 
+      roughness: 0.85,
+      metalness: 0.0,
+    })
+    const pantsMat = new THREE.MeshStandardMaterial({ 
+      color: pantColor, 
+      roughness: 0.75,
+      metalness: 0.0,
+    })
+    const shoeMat = new THREE.MeshStandardMaterial({ 
+      color: shoeColor, 
+      roughness: 0.4,
+      metalness: 0.1,
+    })
+    const eyeMat = new THREE.MeshStandardMaterial({ 
+      color: 0x1a1a2e, 
+      roughness: 0.2,
+      metalness: 0.3,
+    })
+    const mouthMat = new THREE.MeshStandardMaterial({ 
+      color: 0x8b3a3a, 
+      roughness: 0.5,
+    })
+    const noseMat = skinMat.clone()
+    const buttonMat = new THREE.MeshStandardMaterial({ 
+      color: 0xcccccc, 
+      roughness: 0.3,
+      metalness: 0.6,
+    })
+    const collarMat = new THREE.MeshStandardMaterial({ 
+      color: 0xffffff, 
+      roughness: 0.6,
+    })
+    const beltMat = new THREE.MeshStandardMaterial({ 
+      color: 0x3d2817, 
+      roughness: 0.5,
+      metalness: 0.1,
+    })
 
     const torso = new THREE.Mesh(this._pedestrianGeo.torso, bodyMat)
     torso.position.y = 1.0
     torso.castShadow = true
     group.add(torso)
 
+    const collar = new THREE.Mesh(this._pedestrianGeo.collar, collarMat)
+    collar.position.y = 1.32
+    collar.rotation.x = Math.PI / 2
+    collar.castShadow = true
+    group.add(collar)
+
+    const belt = new THREE.Mesh(this._pedestrianGeo.belt, beltMat)
+    belt.position.y = 0.75
+    belt.castShadow = true
+    group.add(belt)
+
+    for (let i = 0; i < 3; i++) {
+      const button = new THREE.Mesh(this._pedestrianGeo.button, buttonMat)
+      button.position.set(0, 1.15 - i * 0.12, 0.115)
+      button.rotation.x = Math.PI / 2
+      button.castShadow = true
+      group.add(button)
+    }
+
     const head = new THREE.Mesh(this._pedestrianGeo.head, skinMat)
-    head.position.y = 1.65
+    head.position.y = 1.68
     head.castShadow = true
     group.add(head)
 
+    const hair = new THREE.Mesh(this._pedestrianGeo.hair, hairMat)
+    hair.position.y = 1.68
+    hair.castShadow = true
+    group.add(hair)
+
+    const leftEye = new THREE.Mesh(this._pedestrianGeo.eye, eyeMat)
+    leftEye.position.set(-0.045, 1.72, 0.13)
+    group.add(leftEye)
+
+    const rightEye = new THREE.Mesh(this._pedestrianGeo.eye, eyeMat)
+    rightEye.position.set(0.045, 1.72, 0.13)
+    group.add(rightEye)
+
+    const nose = new THREE.Mesh(this._pedestrianGeo.nose, noseMat)
+    nose.position.set(0, 1.66, 0.145)
+    nose.rotation.x = Math.PI / 2
+    group.add(nose)
+
+    const mouth = new THREE.Mesh(this._pedestrianGeo.mouth, mouthMat)
+    mouth.position.set(0, 1.6, 0.14)
+    group.add(mouth)
+
     const leftLeg = new THREE.Mesh(this._pedestrianGeo.leg, pantsMat)
-    leftLeg.position.set(-0.12, 0.4, 0)
+    leftLeg.position.set(-0.13, 0.4, 0)
     leftLeg.name = 'leftLeg'
     leftLeg.castShadow = true
     group.add(leftLeg)
 
     const rightLeg = new THREE.Mesh(this._pedestrianGeo.leg, pantsMat)
-    rightLeg.position.set(0.12, 0.4, 0)
+    rightLeg.position.set(0.13, 0.4, 0)
     rightLeg.name = 'rightLeg'
     rightLeg.castShadow = true
     group.add(rightLeg)
 
+    const leftFoot = new THREE.Mesh(this._pedestrianGeo.foot, shoeMat)
+    leftFoot.position.set(-0.13, 0.1, 0.04)
+    leftFoot.name = 'leftFoot'
+    leftFoot.castShadow = true
+    group.add(leftFoot)
+
+    const rightFoot = new THREE.Mesh(this._pedestrianGeo.foot, shoeMat)
+    rightFoot.position.set(0.13, 0.1, 0.04)
+    rightFoot.name = 'rightFoot'
+    rightFoot.castShadow = true
+    group.add(rightFoot)
+
     const leftArm = new THREE.Mesh(this._pedestrianGeo.arm, bodyMat)
-    leftArm.position.set(-0.32, 1.05, 0)
+    leftArm.position.set(-0.32, 1.08, 0)
     leftArm.name = 'leftArm'
     leftArm.castShadow = true
     group.add(leftArm)
 
     const rightArm = new THREE.Mesh(this._pedestrianGeo.arm, bodyMat)
-    rightArm.position.set(0.32, 1.05, 0)
+    rightArm.position.set(0.32, 1.08, 0)
     rightArm.name = 'rightArm'
     rightArm.castShadow = true
     group.add(rightArm)
@@ -94,7 +201,11 @@ export class VehicleBuilder {
       rightLeg,
       leftArm,
       rightArm,
+      leftFoot,
+      rightFoot,
+      torso,
       walkPhase: Math.random() * Math.PI * 2,
+      bobPhase: Math.random() * Math.PI * 2,
     }
 
     this.pedestrians.push(pedData)
@@ -112,33 +223,77 @@ export class VehicleBuilder {
       carType: type,
     }
 
-    const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.7 })
-    const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0x88bbff,
-      roughness: 0.05,
-      metalness: 0.1,
-      transmission: 0.5,
-      transparent: true,
-      opacity: 0.6,
+    const bodyMat = new THREE.MeshPhysicalMaterial({ 
+      color, 
+      roughness: 0.2, 
+      metalness: 0.8,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.15,
     })
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5, metalness: 0.3 })
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0xaaddff,
+      roughness: 0.02,
+      metalness: 0.0,
+      transmission: 0.85,
+      transparent: true,
+      opacity: 0.4,
+      reflectivity: 0.9,
+      ior: 1.5,
+      thickness: 0.02,
+    })
+    const tireMat = new THREE.MeshStandardMaterial({ 
+      color: 0x1a1a1a, 
+      roughness: 0.9, 
+      metalness: 0.0,
+    })
+    const rimMat = new THREE.MeshStandardMaterial({ 
+      color: 0xcccccc, 
+      roughness: 0.2, 
+      metalness: 0.9,
+    })
+    const hubMat = new THREE.MeshStandardMaterial({ 
+      color: 0x888888, 
+      roughness: 0.3, 
+      metalness: 0.7,
+    })
     const lightMat = new THREE.MeshStandardMaterial({
-      color: 0xffffcc,
-      emissive: 0xffff66,
-      emissiveIntensity: 0.5,
+      color: 0xffffee,
+      emissive: 0xffffaa,
+      emissiveIntensity: 0.8,
+      roughness: 0.1,
+      metalness: 0.1,
     })
     const tailLightMat = new THREE.MeshStandardMaterial({
-      color: 0xff3333,
+      color: 0xff4444,
       emissive: 0xff0000,
-      emissiveIntensity: 0.3,
+      emissiveIntensity: 0.5,
+      roughness: 0.2,
+      metalness: 0.1,
+    })
+    const bumperMat = new THREE.MeshStandardMaterial({
+      color: 0x222222,
+      roughness: 0.6,
+      metalness: 0.1,
+    })
+    const mirrorMat = new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.25,
+      metalness: 0.7,
+      clearcoat: 0.4,
+      clearcoatRoughness: 0.2,
+    })
+    const handleMat = new THREE.MeshStandardMaterial({
+      color: 0xdddddd,
+      roughness: 0.25,
+      metalness: 0.8,
     })
 
     if (type === 'sedan') {
-      this._buildSedan(group, bodyMat, glassMat, wheelMat, lightMat, tailLightMat)
+      this._buildSedan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat)
     } else if (type === 'suv') {
-      this._buildSuv(group, bodyMat, glassMat, wheelMat, lightMat, tailLightMat)
+      this._buildSuv(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat)
     } else if (type === 'van') {
-      this._buildVan(group, bodyMat, glassMat, wheelMat, lightMat, tailLightMat)
+      this._buildVan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat)
     }
 
     const curve = new THREE.CatmullRomCurve3(
@@ -160,7 +315,7 @@ export class VehicleBuilder {
     return group
   }
 
-  _buildSedan(group, bodyMat, glassMat, wheelMat, lightMat, tailLightMat) {
+  _buildSedan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat) {
     const body = new THREE.Mesh(this._carGeo.sedanBody, bodyMat)
     body.position.y = 0.5
     body.castShadow = true
@@ -170,7 +325,7 @@ export class VehicleBuilder {
     cabin.position.set(0, 1.0, 0.2)
     group.add(cabin)
 
-    this._addWheels(group, wheelMat, 0.35, [
+    this._addWheels(group, tireMat, rimMat, hubMat, 0.35, [
       [-0.65, 0.35, 1.1],
       [0.65, 0.35, 1.1],
       [-0.65, 0.35, -1.1],
@@ -178,9 +333,15 @@ export class VehicleBuilder {
     ])
 
     this._addLights(group, lightMat, tailLightMat, 0.55, 1.5)
+
+    this._addBumpers(group, bumperMat, 0.2, 1.55)
+
+    this._addSideMirrors(group, mirrorMat, 0.9, 0.85)
+
+    this._addDoorHandles(group, handleMat, 0.75, 0.6, 0.5)
   }
 
-  _buildSuv(group, bodyMat, glassMat, wheelMat, lightMat, tailLightMat) {
+  _buildSuv(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat) {
     const body = new THREE.Mesh(this._carGeo.suvBody, bodyMat)
     body.position.y = 0.65
     body.castShadow = true
@@ -190,7 +351,7 @@ export class VehicleBuilder {
     cabin.position.set(0, 1.2, 0)
     group.add(cabin)
 
-    this._addWheels(group, wheelMat, 0.4, [
+    this._addWheels(group, tireMat, rimMat, hubMat, 0.4, [
       [-0.75, 0.4, 1.2],
       [0.75, 0.4, 1.2],
       [-0.75, 0.4, -1.2],
@@ -198,9 +359,15 @@ export class VehicleBuilder {
     ])
 
     this._addLights(group, lightMat, tailLightMat, 0.7, 1.7)
+
+    this._addBumpers(group, bumperMat, 0.25, 1.75)
+
+    this._addSideMirrors(group, mirrorMat, 1.05, 1.0)
+
+    this._addDoorHandles(group, handleMat, 0.9, 0.75, 0.6)
   }
 
-  _buildVan(group, bodyMat, glassMat, wheelMat, lightMat, tailLightMat) {
+  _buildVan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat) {
     const body = new THREE.Mesh(this._carGeo.vanBody, bodyMat)
     body.position.y = 0.85
     body.castShadow = true
@@ -210,7 +377,7 @@ export class VehicleBuilder {
     cabin.position.set(0, 1.45, 1.2)
     group.add(cabin)
 
-    this._addWheels(group, wheelMat, 0.4, [
+    this._addWheels(group, tireMat, rimMat, hubMat, 0.4, [
       [-0.8, 0.4, 1.4],
       [0.8, 0.4, 1.4],
       [-0.8, 0.4, -1.4],
@@ -218,56 +385,256 @@ export class VehicleBuilder {
     ])
 
     this._addLights(group, lightMat, tailLightMat, 0.9, 1.9)
+
+    this._addBumpers(group, bumperMat, 0.3, 1.95)
+
+    this._addSideMirrors(group, mirrorMat, 1.25, 1.3)
+
+    this._addDoorHandles(group, handleMat, 1.0, 0.9, 0.8)
   }
 
-  _addWheels(group, wheelMat, radius, positions) {
-    const wheelGeo = new THREE.CylinderGeometry(radius, radius, 0.2, 12)
+  _addWheels(group, tireMat, rimMat, hubMat, radius, positions) {
+    const tireScale = radius
     for (const pos of positions) {
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat)
-      wheel.position.set(pos[0], pos[1], pos[2])
-      wheel.rotation.z = Math.PI / 2
-      wheel.castShadow = true
-      group.add(wheel)
+      const wheelGroup = new THREE.Group()
+
+      const tire = new THREE.Mesh(this._carGeo.wheelTire, tireMat)
+      tire.scale.set(tireScale, tireScale, 1)
+      tire.rotation.z = Math.PI / 2
+      tire.castShadow = true
+      wheelGroup.add(tire)
+
+      const rim = new THREE.Mesh(this._carGeo.wheelRim, rimMat)
+      rim.scale.set(tireScale * 0.6, tireScale * 0.6, 1)
+      rim.rotation.z = Math.PI / 2
+      wheelGroup.add(rim)
+
+      const hub = new THREE.Mesh(this._carGeo.wheelHub, hubMat)
+      hub.scale.set(1, 1, 1)
+      hub.rotation.z = Math.PI / 2
+      wheelGroup.add(hub)
+
+      wheelGroup.position.set(pos[0], pos[1], pos[2])
+      group.add(wheelGroup)
     }
   }
 
   _addLights(group, lightMat, tailLightMat, yPos, halfLength) {
-    const lightGeo = new THREE.BoxGeometry(0.3, 0.15, 0.1)
-    const frontLeft = new THREE.Mesh(lightGeo, lightMat)
+    const frontLeft = new THREE.Mesh(this._carGeo.headlight, lightMat)
     frontLeft.position.set(-0.5, yPos, halfLength)
+    frontLeft.rotation.x = -Math.PI / 2
     group.add(frontLeft)
 
-    const frontRight = new THREE.Mesh(lightGeo, lightMat)
+    const frontRight = new THREE.Mesh(this._carGeo.headlight, lightMat)
     frontRight.position.set(0.5, yPos, halfLength)
+    frontRight.rotation.x = -Math.PI / 2
     group.add(frontRight)
 
-    const tailGeo = new THREE.BoxGeometry(0.25, 0.12, 0.1)
-    const tailLeft = new THREE.Mesh(tailGeo, tailLightMat)
+    const tailLeft = new THREE.Mesh(this._carGeo.taillight, tailLightMat)
     tailLeft.position.set(-0.5, yPos, -halfLength)
     group.add(tailLeft)
 
-    const tailRight = new THREE.Mesh(tailGeo, tailLightMat)
+    const tailRight = new THREE.Mesh(this._carGeo.taillight, tailLightMat)
     tailRight.position.set(0.5, yPos, -halfLength)
     group.add(tailRight)
   }
 
+  _addBumpers(group, bumperMat, yPos, halfLength) {
+    const frontBumper = new THREE.Mesh(this._carGeo.bumper, bumperMat)
+    frontBumper.position.set(0, yPos, halfLength + 0.05)
+    frontBumper.castShadow = true
+    group.add(frontBumper)
+
+    const rearBumper = new THREE.Mesh(this._carGeo.bumper, bumperMat)
+    rearBumper.position.set(0, yPos, -halfLength - 0.05)
+    rearBumper.castShadow = true
+    group.add(rearBumper)
+  }
+
+  _addSideMirrors(group, mirrorMat, yPos, zPos) {
+    const leftMirror = new THREE.Mesh(this._carGeo.sideMirror, mirrorMat)
+    leftMirror.position.set(-0.85, yPos, zPos)
+    leftMirror.castShadow = true
+    group.add(leftMirror)
+
+    const rightMirror = new THREE.Mesh(this._carGeo.sideMirror, mirrorMat)
+    rightMirror.position.set(0.85, yPos, zPos)
+    rightMirror.castShadow = true
+    group.add(rightMirror)
+  }
+
+  _addDoorHandles(group, handleMat, yPos, zFront, zRear) {
+    const leftFrontHandle = new THREE.Mesh(this._carGeo.doorHandle, handleMat)
+    leftFrontHandle.position.set(-0.76, yPos, zFront)
+    group.add(leftFrontHandle)
+
+    const leftRearHandle = new THREE.Mesh(this._carGeo.doorHandle, handleMat)
+    leftRearHandle.position.set(-0.76, yPos, -zRear)
+    group.add(leftRearHandle)
+
+    const rightFrontHandle = new THREE.Mesh(this._carGeo.doorHandle, handleMat)
+    rightFrontHandle.position.set(0.76, yPos, zFront)
+    group.add(rightFrontHandle)
+
+    const rightRearHandle = new THREE.Mesh(this._carGeo.doorHandle, handleMat)
+    rightRearHandle.position.set(0.76, yPos, -zRear)
+    group.add(rightRearHandle)
+  }
+
   _createPedestrianGeometry() {
+    const headGeo = new THREE.SphereGeometry(0.15, 24, 18)
+    const torsoGeo = new THREE.BoxGeometry(0.38, 0.55, 0.22, 4, 4, 2)
+    const legGeo = new THREE.CylinderGeometry(0.06, 0.07, 0.6, 12)
+    const armGeo = new THREE.CylinderGeometry(0.045, 0.05, 0.5, 10)
+    const footGeo = new THREE.BoxGeometry(0.1, 0.06, 0.18)
+    
+    const eyeGeo = new THREE.SphereGeometry(0.018, 8, 6)
+    const mouthGeo = new THREE.BoxGeometry(0.04, 0.008, 0.01)
+    const noseGeo = new THREE.ConeGeometry(0.015, 0.025, 6)
+    
+    const collarGeo = new THREE.TorusGeometry(0.12, 0.025, 8, 16)
+    const beltGeo = new THREE.BoxGeometry(0.4, 0.04, 0.04)
+    const buttonGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.01, 8)
+    
+    const hairGeo = new THREE.SphereGeometry(0.155, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2)
+    
     return {
-      torso: new THREE.BoxGeometry(0.35, 0.5, 0.2),
-      head: new THREE.SphereGeometry(0.14, 8, 6),
-      leg: new THREE.BoxGeometry(0.12, 0.6, 0.12),
-      arm: new THREE.BoxGeometry(0.1, 0.5, 0.1),
+      head: headGeo,
+      torso: torsoGeo,
+      leg: legGeo,
+      arm: armGeo,
+      foot: footGeo,
+      eye: eyeGeo,
+      mouth: mouthGeo,
+      nose: noseGeo,
+      collar: collarGeo,
+      belt: beltGeo,
+      button: buttonGeo,
+      hair: hairGeo,
     }
   }
 
   _createCarGeometry() {
+    const sedanBody = (() => {
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.7, 0)
+      shape.lineTo(-0.7, 0.25)
+      shape.quadraticCurveTo(-0.7, 0.5, -0.5, 0.55)
+      shape.lineTo(0.5, 0.55)
+      shape.quadraticCurveTo(0.7, 0.5, 0.7, 0.25)
+      shape.lineTo(0.7, 0)
+      shape.lineTo(-0.7, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.2, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 4 })
+      geo.translate(0, 0, -1.6)
+      return geo
+    })()
+
+    const sedanCabin = (() => {
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.55, 0)
+      shape.lineTo(-0.45, 0.35)
+      shape.quadraticCurveTo(0, 0.5, 0.45, 0.35)
+      shape.lineTo(0.55, 0)
+      shape.lineTo(-0.55, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.5, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 3 })
+      geo.translate(0, 0, -0.75)
+      return geo
+    })()
+
+    const suvBody = (() => {
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.8, 0)
+      shape.lineTo(-0.8, 0.35)
+      shape.quadraticCurveTo(-0.8, 0.65, -0.6, 0.7)
+      shape.lineTo(0.6, 0.7)
+      shape.quadraticCurveTo(0.8, 0.65, 0.8, 0.35)
+      shape.lineTo(0.8, 0)
+      shape.lineTo(-0.8, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.6, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 4 })
+      geo.translate(0, 0, -1.8)
+      return geo
+    })()
+
+    const suvCabin = (() => {
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.65, 0)
+      shape.lineTo(-0.6, 0.55)
+      shape.quadraticCurveTo(0, 0.65, 0.6, 0.55)
+      shape.lineTo(0.65, 0)
+      shape.lineTo(-0.65, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 2.0, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 3 })
+      geo.translate(0, 0, -1.0)
+      return geo
+    })()
+
+    const vanBody = (() => {
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.9, 0)
+      shape.lineTo(-0.9, 0.5)
+      shape.quadraticCurveTo(-0.9, 0.9, -0.7, 0.95)
+      shape.lineTo(0.7, 0.95)
+      shape.quadraticCurveTo(0.9, 0.9, 0.9, 0.5)
+      shape.lineTo(0.9, 0)
+      shape.lineTo(-0.9, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 4.0, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 4 })
+      geo.translate(0, 0, -2.0)
+      return geo
+    })()
+
+    const vanCabin = (() => {
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.75, 0)
+      shape.lineTo(-0.7, 0.6)
+      shape.quadraticCurveTo(0, 0.7, 0.7, 0.6)
+      shape.lineTo(0.75, 0)
+      shape.lineTo(-0.75, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.3, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 3 })
+      geo.translate(0, 0, -0.65)
+      return geo
+    })()
+
+    const wheelTire = (() => {
+      const geo = new THREE.CylinderGeometry(1, 1, 0.25, 32, 4, true)
+      return geo
+    })()
+
+    const wheelRim = (() => {
+      const geo = new THREE.CylinderGeometry(0.6, 0.6, 0.26, 12, 1, true)
+      return geo
+    })()
+
+    const wheelHub = new THREE.CylinderGeometry(0.15, 0.15, 0.28, 16)
+
+    const headlight = (() => {
+      const geo = new THREE.SphereGeometry(0.12, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2)
+      geo.scale(1.2, 0.6, 1)
+      return geo
+    })()
+
+    const taillight = (() => {
+      const geo = new THREE.BoxGeometry(0.25, 0.1, 0.08)
+      return geo
+    })()
+
+    const bumper = new THREE.BoxGeometry(1.5, 0.12, 0.15)
+    const sideMirror = new THREE.SphereGeometry(0.08, 8, 6)
+    const doorHandle = new THREE.BoxGeometry(0.08, 0.03, 0.02)
+
     return {
-      sedanBody: new THREE.BoxGeometry(1.4, 0.6, 3.2),
-      sedanCabin: new THREE.BoxGeometry(1.3, 0.5, 1.6),
-      suvBody: new THREE.BoxGeometry(1.6, 0.8, 3.6),
-      suvCabin: new THREE.BoxGeometry(1.5, 0.6, 2.0),
-      vanBody: new THREE.BoxGeometry(1.8, 1.0, 4.0),
-      vanCabin: new THREE.BoxGeometry(1.7, 0.6, 1.2),
+      sedanBody,
+      sedanCabin,
+      suvBody,
+      suvCabin,
+      vanBody,
+      vanCabin,
+      wheelTire,
+      wheelRim,
+      wheelHub,
+      headlight,
+      taillight,
+      bumper,
+      sideMirror,
+      doorHandle,
     }
   }
 
@@ -299,12 +666,44 @@ export class VehicleBuilder {
       ped.group.rotation.y = ped.direction === 1 ? angle : angle + Math.PI
 
       ped.walkPhase += delta * ped.speed * 8
-      const swing = Math.sin(ped.walkPhase) * 0.4
+      ped.bobPhase += delta * ped.speed * 8
 
-      if (ped.leftLeg) ped.leftLeg.rotation.x = swing
-      if (ped.rightLeg) ped.rightLeg.rotation.x = -swing
-      if (ped.leftArm) ped.leftArm.rotation.x = -swing * 0.6
-      if (ped.rightArm) ped.rightArm.rotation.x = swing * 0.6
+      const legSwing = Math.sin(ped.walkPhase) * 0.5
+      const armSwing = Math.sin(ped.walkPhase + Math.PI) * 0.4
+      const bodyBob = Math.abs(Math.sin(ped.walkPhase)) * 0.03
+      const hipSway = Math.sin(ped.walkPhase * 2) * 0.02
+      const shoulderSway = Math.sin(ped.walkPhase * 2 + Math.PI) * 0.015
+
+      if (ped.leftLeg) {
+        ped.leftLeg.rotation.x = legSwing
+        ped.leftLeg.position.z = hipSway * 0.5
+      }
+      if (ped.rightLeg) {
+        ped.rightLeg.rotation.x = -legSwing
+        ped.rightLeg.position.z = -hipSway * 0.5
+      }
+      if (ped.leftArm) {
+        ped.leftArm.rotation.x = armSwing
+        ped.leftArm.position.z = shoulderSway
+      }
+      if (ped.rightArm) {
+        ped.rightArm.rotation.x = -armSwing
+        ped.rightArm.position.z = -shoulderSway
+      }
+      if (ped.leftFoot) {
+        const footLift = Math.max(0, Math.sin(ped.walkPhase + Math.PI / 2)) * 0.08
+        ped.leftFoot.position.y = 0.1 + footLift
+        ped.leftFoot.rotation.x = legSwing * 0.3
+      }
+      if (ped.rightFoot) {
+        const footLift = Math.max(0, Math.sin(ped.walkPhase - Math.PI / 2)) * 0.08
+        ped.rightFoot.position.y = 0.1 + footLift
+        ped.rightFoot.rotation.x = -legSwing * 0.3
+      }
+      if (ped.torso) {
+        ped.torso.position.y = 1.0 + bodyBob
+        ped.torso.rotation.z = hipSway * 0.3
+      }
     }
 
     for (const car of this.cars) {
@@ -355,10 +754,7 @@ export class VehicleBuilder {
   }
 
   dispose() {
-    this._pedestrianGeo.torso.dispose()
-    this._pedestrianGeo.head.dispose()
-    this._pedestrianGeo.leg.dispose()
-    this._pedestrianGeo.arm.dispose()
+    Object.values(this._pedestrianGeo).forEach(g => g.dispose())
     Object.values(this._carGeo).forEach(g => g.dispose())
 
     this.vehicleGroup.traverse((child) => {
