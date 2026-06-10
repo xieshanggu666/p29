@@ -526,6 +526,86 @@
 
 ---
 
+### 2026-06-10 Bug修复：车身遮挡内饰（结构重构）
+
+#### Bug 9：车辆内饰被车体遮挡，渲染顺序/深度参数无法解决
+
+- **问题表现**
+  - 透过车窗观察车内，内饰（座椅、方向盘、仪表台）完全不可见
+  - 已确认内饰 mesh 存在于场景树中（`group.getObjectByName('driverSeat')` 可获取）
+  - 调整 renderOrder、depthWrite、transmission 参数均无效果，内饰依然不可见
+  - 复现步骤：启动场景 → 镜头靠近车辆 → 透过车窗查看 → 内饰被完全遮挡
+
+- **根因分析**
+  - **核心原因：车身几何实体本身是实心闭合的 ExtrudeGeometry**，车窗区域在车身上也是不透明金属
+  - 原实现结构：
+    1. `sedanBody` Shape 是完整汽车侧面轮廓：从地面(y=0) → 保险杠 → 引擎盖(y=0.5) → 挡风玻璃(y=0.55) → 车顶曲线 → 行李箱 → 地面
+    2. 此 Shape 沿 Z 轴拉伸 depth=3.2，生成**左右两侧完整的金属钣金**，覆盖了整个侧面（包括车窗区域）
+    3. 另外添加的 `sedanCabin` 透明玻璃 mesh 只是放在车身上方，**与车身侧面重叠**，玻璃后面的金属车身仍然阻挡视线
+  - 错误的修复思路尝试：
+    - ❌ 调整 renderOrder：金属车身的深度缓冲优先级高于玻璃，内饰仍在车身后方
+    - ❌ 降低 transmission：透射模式只能看到背景环境贴图，看不到内部
+    - ❌ depthWrite=false：让玻璃不写深度，但车身侧面的金属已先写入深度
+  - **根本问题总结**：这不是渲染状态问题，而是**几何建模问题**——车窗区域根本就不应该有金属。需要把车身侧面的"窗户部分"挖掉，从物理层面让视线穿透。
+
+- **修复方案**（彻底重构车身几何结构）
+
+  **1. 车身下部（BodyLower）——只保留金属钣金**
+  - 把所有车型的 Body Shape **截断到车窗底部**
+  - sedanBodyLower：Shape 最高到 y=0.45（A柱/C柱底部），不再向上覆盖车窗区域
+  - suvBodyLower：Shape 最高到 y=0.58
+  - vanBodyLower：Shape 最高到 y=0.7，前后缘为斜切（给前挡风/后货舱玻璃留空）
+  - 这样左右两侧钣金在车窗下方截断，**车窗区域空出来了**，不再遮挡视线
+
+  **2. 玻璃座舱（GlassCabin）——覆盖整车窗户**
+  - 扩大 GlassCabin 的 depth 覆盖整个车窗长度：
+    - sedanGlassCabin：depth=2.8（原 1.5），覆盖 Z∈[-1.4, 1.4]，接近整车长度
+    - suvGlassCabin：depth=3.3（原 2.0）
+  - GlassCabin 的 Shape 保持顶部曲线（挡风玻璃→车顶→后窗）
+  - GlassCabin 的 XY 端面就是前/后挡风玻璃
+  - GlassCabin 的拉伸侧壁（沿Z方向）就是左/右侧窗玻璃
+  - 这个单一 ExtrudeGeometry 同时提供了 前挡+后窗+左窗+右窗+车顶 共5个面的玻璃
+
+  **3. 金属窗框（WindowFrames）——勾勒车窗轮廓**
+  - 没有窗框的玻璃看起来像一块光秃秃的塑料，不像真实汽车
+  - 新增 9 种窗框几何体：`pillarA/B/C`（立柱）、`roofRail/RoofRailLong`（车顶纵梁）、`sill/sillLong`（门槛梁）、`header/headerWide`（上下横梁）、`roofPanel/roofPanelWide`（车顶面板）
+  - 新增三个车型专用的窗框方法：
+    - `_addSedanWindowFrames`：A/B/C柱 + 前后横梁 + 中横梁 + 车顶纵梁 + 门槛 + 车顶面板
+    - `_addSuvWindowFrames`：A柱 + 2根B柱 + C柱（三排座布局） + 所有横梁/纵梁/车顶
+    - `_addVanWindowFrames`：A柱 + B柱 + 货舱立柱 + 横梁/纵梁/车顶 + 额外的货舱侧窗/后窗玻璃
+  - 窗框全部使用 `bodyMat`（车身金属材质），视觉上与车身融为一体
+
+  **4. Van 特殊处理——客货分离**
+  - 面包车的驾驶舱（前部）用 GlassCabin + 窗框
+  - 后部货舱用独立的 `vanSideGlassL/R` + `vanRearGlass`（新增的薄 BoxGeometry）
+  - 中间加货舱立柱分隔
+
+  **5. Cabin 位置重校准**
+  - sedan: body.y=0.5, body最高局部Y=0.45 → 车身最高全局Y=0.95 → cabin.position.y = 0.95
+  - suv: body.y=0.65, body最高局部Y=0.58 → 全局Y=1.23 → cabin.y=1.23
+  - van: body.y=0.85, body最高局部Y=0.7 → 全局Y=1.55 → cabin.y=1.55（保持原有位置偏移）
+
+- **代码变更点统计**
+  - `_createCarGeometry`: 新增/修改 22 种几何体（3款BodyLower + 3款GlassCabin + 3款玻璃补充 + 9款窗框 + 2款Van专用）
+  - 新增辅助方法：`_addSedanWindowFrames`、`_addSuvWindowFrames`、`_addVanWindowFrames`（共约 300 行）
+  - `_buildSedan/Suv/Van`: 调整 cabin.position，插入窗框调用
+  - 移除：原 `glassMat` 的 transmission 参数已无需过高，但保留 0.6 保持玻璃质感
+
+- **测试验证方法及结果**
+  - **几何验证**：车身侧面从 Y=0.5（全局）到 Y=1.2 之间的 XZ 平面不再有 metal mesh（用 raycaster 打射验证）
+  - **窗框验证**：每辆车至少有 18+ 个窗框 mesh，`group.children.length` 大幅增加
+  - **视觉验证**：从任意角度透过车窗应可见深色座椅轮廓
+  - **深度验证**：内饰深度缓冲正确，车身下半遮挡座椅脚部正常
+  - **测试结果**：26 个单元测试全部通过，生产构建成功
+
+- **预防改进建议**
+  1. 所有 3D 建模前画正视图/侧视图草图，确定"哪些区域是什么材质"，避免后期发现遮挡
+  2. ExtrudeGeometry 拉伸复杂轮廓时应先做几何剖切分析，不要一次性做全高度实心
+  3. 建立"零件清单"规范：每辆车必须明确列出 body / glass / frames / interior / wheels 各包含什么
+  4. 新增 `raycaster` 单元测试：从车窗外向车内打射线，第一个打到的应是玻璃而不是金属
+
+---
+
 ### 后续修改记录规范
 
 > **所有后续对 3D 模型、动画、材质、配置等的修改，均需按以下结构追加记录到本文件**

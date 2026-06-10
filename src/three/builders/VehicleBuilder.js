@@ -335,9 +335,11 @@ export class VehicleBuilder {
     group.add(body)
 
     const cabin = new THREE.Mesh(this._carGeo.sedanCabin, glassMat)
-    cabin.position.set(0, 1.0, 0.2)
+    cabin.position.set(0, 0.95, 0)
     cabin.renderOrder = 3
     group.add(cabin)
+
+    this._addSedanWindowFrames(group, bodyMat)
 
     const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.35, [
       [-0.7, 0.35, 1.05],
@@ -363,6 +365,87 @@ export class VehicleBuilder {
     return { wheelGroups, interiorData }
   }
 
+  _addSedanWindowFrames(group, bodyMat) {
+    const frameMat = bodyMat
+    const baseY = 0.95
+    const cabinHalfLen = 1.4
+
+    const aLeft = new THREE.Mesh(this._carGeo.pillarA, frameMat)
+    aLeft.position.set(-0.45, baseY + 0.2, cabinHalfLen - 0.05)
+    aLeft.rotation.z = -0.35
+    aLeft.castShadow = true
+    group.add(aLeft)
+
+    const aRight = new THREE.Mesh(this._carGeo.pillarA, frameMat)
+    aRight.position.set(0.45, baseY + 0.2, cabinHalfLen - 0.05)
+    aRight.rotation.z = 0.35
+    aRight.castShadow = true
+    group.add(aRight)
+
+    const bLeft = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    bLeft.position.set(-0.49, baseY + 0.22, -0.05)
+    bLeft.castShadow = true
+    group.add(bLeft)
+
+    const bRight = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    bRight.position.set(0.49, baseY + 0.22, -0.05)
+    bRight.castShadow = true
+    group.add(bRight)
+
+    const cLeft = new THREE.Mesh(this._carGeo.pillarC, frameMat)
+    cLeft.position.set(-0.45, baseY + 0.2, -(cabinHalfLen - 0.05))
+    cLeft.rotation.z = 0.35
+    cLeft.castShadow = true
+    group.add(cLeft)
+
+    const cRight = new THREE.Mesh(this._carGeo.pillarC, frameMat)
+    cRight.position.set(0.45, baseY + 0.2, -(cabinHalfLen - 0.05))
+    cRight.rotation.z = -0.35
+    cRight.castShadow = true
+    group.add(cRight)
+
+    const railLeft = new THREE.Mesh(this._carGeo.roofRail, frameMat)
+    railLeft.position.set(-0.42, baseY + 0.45, 0)
+    railLeft.castShadow = true
+    group.add(railLeft)
+
+    const railRight = new THREE.Mesh(this._carGeo.roofRail, frameMat)
+    railRight.position.set(0.42, baseY + 0.45, 0)
+    railRight.castShadow = true
+    group.add(railRight)
+
+    const sillLeft = new THREE.Mesh(this._carGeo.sill, frameMat)
+    sillLeft.position.set(-0.49, baseY + 0.02, 0)
+    sillLeft.castShadow = true
+    group.add(sillLeft)
+
+    const sillRight = new THREE.Mesh(this._carGeo.sill, frameMat)
+    sillRight.position.set(0.49, baseY + 0.02, 0)
+    sillRight.castShadow = true
+    group.add(sillRight)
+
+    const headerFront = new THREE.Mesh(this._carGeo.header, frameMat)
+    headerFront.position.set(0, baseY + 0.4, cabinHalfLen - 0.05)
+    headerFront.castShadow = true
+    group.add(headerFront)
+
+    const headerRear = new THREE.Mesh(this._carGeo.header, frameMat)
+    headerRear.position.set(0, baseY + 0.4, -(cabinHalfLen - 0.05))
+    headerRear.castShadow = true
+    group.add(headerRear)
+
+    const headerMiddle = new THREE.Mesh(this._carGeo.header, frameMat)
+    headerMiddle.position.set(0, baseY + 0.43, -0.05)
+    headerMiddle.castShadow = true
+    group.add(headerMiddle)
+
+    const roof = new THREE.Mesh(this._carGeo.roofPanel, bodyMat)
+    roof.position.set(0, baseY + 0.49, 0)
+    roof.castShadow = true
+    roof.renderOrder = 1
+    group.add(roof)
+  }
+
   _buildSuv(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat) {
     const body = new THREE.Mesh(this._carGeo.suvBody, bodyMat)
     body.position.y = 0.65
@@ -371,9 +454,11 @@ export class VehicleBuilder {
     group.add(body)
 
     const cabin = new THREE.Mesh(this._carGeo.suvCabin, glassMat)
-    cabin.position.set(0, 1.2, 0)
+    cabin.position.set(0, 1.23, 0)
     cabin.renderOrder = 3
     group.add(cabin)
+
+    this._addSuvWindowFrames(group, bodyMat)
 
     const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.4, [
       [-0.8, 0.4, 1.15],
@@ -399,6 +484,100 @@ export class VehicleBuilder {
     return { wheelGroups, interiorData }
   }
 
+  _addSuvWindowFrames(group, bodyMat) {
+    const frameMat = bodyMat
+    const baseY = 1.23
+    const cabinHalfLen = 1.65
+
+    const aLeft = new THREE.Mesh(this._carGeo.pillarA, frameMat)
+    aLeft.position.set(-0.54, baseY + 0.28, cabinHalfLen - 0.05)
+    aLeft.scale.y = 1.15
+    aLeft.rotation.z = -0.25
+    aLeft.castShadow = true
+    group.add(aLeft)
+
+    const aRight = new THREE.Mesh(this._carGeo.pillarA, frameMat)
+    aRight.position.set(0.54, baseY + 0.28, cabinHalfLen - 0.05)
+    aRight.scale.y = 1.15
+    aRight.rotation.z = 0.25
+    aRight.castShadow = true
+    group.add(aRight)
+
+    const bLeft = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    bLeft.position.set(-0.58, baseY + 0.32, 0.4)
+    bLeft.scale.y = 1.2
+    bLeft.castShadow = true
+    group.add(bLeft)
+
+    const bRight = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    bRight.position.set(0.58, baseY + 0.32, 0.4)
+    bRight.scale.y = 1.2
+    bRight.castShadow = true
+    group.add(bRight)
+
+    const b2Left = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    b2Left.position.set(-0.58, baseY + 0.32, -0.6)
+    b2Left.scale.y = 1.2
+    b2Left.castShadow = true
+    group.add(b2Left)
+
+    const b2Right = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    b2Right.position.set(0.58, baseY + 0.32, -0.6)
+    b2Right.scale.y = 1.2
+    b2Right.castShadow = true
+    group.add(b2Right)
+
+    const cLeft = new THREE.Mesh(this._carGeo.pillarC, frameMat)
+    cLeft.position.set(-0.54, baseY + 0.28, -(cabinHalfLen - 0.05))
+    cLeft.scale.y = 1.15
+    cLeft.rotation.z = 0.25
+    cLeft.castShadow = true
+    group.add(cLeft)
+
+    const cRight = new THREE.Mesh(this._carGeo.pillarC, frameMat)
+    cRight.position.set(0.54, baseY + 0.28, -(cabinHalfLen - 0.05))
+    cRight.scale.y = 1.15
+    cRight.rotation.z = -0.25
+    cRight.castShadow = true
+    group.add(cRight)
+
+    const railLeft = new THREE.Mesh(this._carGeo.roofRailLong, frameMat)
+    railLeft.position.set(-0.52, baseY + 0.62, 0)
+    railLeft.castShadow = true
+    group.add(railLeft)
+
+    const railRight = new THREE.Mesh(this._carGeo.roofRailLong, frameMat)
+    railRight.position.set(0.52, baseY + 0.62, 0)
+    railRight.castShadow = true
+    group.add(railRight)
+
+    const sillLeft = new THREE.Mesh(this._carGeo.sillLong, frameMat)
+    sillLeft.position.set(-0.58, baseY + 0.02, 0)
+    sillLeft.castShadow = true
+    group.add(sillLeft)
+
+    const sillRight = new THREE.Mesh(this._carGeo.sillLong, frameMat)
+    sillRight.position.set(0.58, baseY + 0.02, 0)
+    sillRight.castShadow = true
+    group.add(sillRight)
+
+    const headerFront = new THREE.Mesh(this._carGeo.headerWide, frameMat)
+    headerFront.position.set(0, baseY + 0.55, cabinHalfLen - 0.05)
+    headerFront.castShadow = true
+    group.add(headerFront)
+
+    const headerRear = new THREE.Mesh(this._carGeo.headerWide, frameMat)
+    headerRear.position.set(0, baseY + 0.55, -(cabinHalfLen - 0.05))
+    headerRear.castShadow = true
+    group.add(headerRear)
+
+    const roof = new THREE.Mesh(this._carGeo.roofPanelWide, bodyMat)
+    roof.position.set(0, baseY + 0.64, 0)
+    roof.castShadow = true
+    roof.renderOrder = 1
+    group.add(roof)
+  }
+
   _buildVan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat) {
     const body = new THREE.Mesh(this._carGeo.vanBody, bodyMat)
     body.position.y = 0.85
@@ -407,9 +586,11 @@ export class VehicleBuilder {
     group.add(body)
 
     const cabin = new THREE.Mesh(this._carGeo.vanCabin, glassMat)
-    cabin.position.set(0, 1.45, 1.2)
+    cabin.position.set(0, 1.55, 1.2)
     cabin.renderOrder = 3
     group.add(cabin)
+
+    this._addVanWindowFrames(group, bodyMat, glassMat)
 
     const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.4, [
       [-0.85, 0.4, 1.35],
@@ -433,6 +614,100 @@ export class VehicleBuilder {
     this._addWheelWells(group, 0.3, 1.35, -1.35, 0.08)
 
     return { wheelGroups, interiorData }
+  }
+
+  _addVanWindowFrames(group, bodyMat, glassMat) {
+    const frameMat = bodyMat
+    const baseY = 1.55
+
+    const aLeft = new THREE.Mesh(this._carGeo.pillarA, frameMat)
+    aLeft.position.set(-0.61, baseY + 0.3, 1.8)
+    aLeft.scale.y = 1.2
+    aLeft.rotation.z = -0.2
+    aLeft.castShadow = true
+    group.add(aLeft)
+
+    const aRight = new THREE.Mesh(this._carGeo.pillarA, frameMat)
+    aRight.position.set(0.61, baseY + 0.3, 1.8)
+    aRight.scale.y = 1.2
+    aRight.rotation.z = 0.2
+    aRight.castShadow = true
+    group.add(aRight)
+
+    const bLeft = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    bLeft.position.set(-0.64, baseY + 0.35, 1.15)
+    bLeft.scale.y = 1.3
+    bLeft.castShadow = true
+    group.add(bLeft)
+
+    const bRight = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    bRight.position.set(0.64, baseY + 0.35, 1.15)
+    bRight.scale.y = 1.3
+    bRight.castShadow = true
+    group.add(bRight)
+
+    const cargoPillarLeft = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    cargoPillarLeft.position.set(-0.64, baseY + 0.35, -0.5)
+    cargoPillarLeft.scale.y = 1.3
+    cargoPillarLeft.castShadow = true
+    group.add(cargoPillarLeft)
+
+    const cargoPillarRight = new THREE.Mesh(this._carGeo.pillarB, frameMat)
+    cargoPillarRight.position.set(0.64, baseY + 0.35, -0.5)
+    cargoPillarRight.scale.y = 1.3
+    cargoPillarRight.castShadow = true
+    group.add(cargoPillarRight)
+
+    const railLeft = new THREE.Mesh(this._carGeo.roofRailLong, frameMat)
+    railLeft.position.set(-0.6, baseY + 0.68, 0)
+    railLeft.castShadow = true
+    group.add(railLeft)
+
+    const railRight = new THREE.Mesh(this._carGeo.roofRailLong, frameMat)
+    railRight.position.set(0.6, baseY + 0.68, 0)
+    railRight.castShadow = true
+    group.add(railRight)
+
+    const sillLeft = new THREE.Mesh(this._carGeo.sillLong, frameMat)
+    sillLeft.position.set(-0.64, baseY + 0.02, 0)
+    sillLeft.castShadow = true
+    group.add(sillLeft)
+
+    const sillRight = new THREE.Mesh(this._carGeo.sillLong, frameMat)
+    sillRight.position.set(0.64, baseY + 0.02, 0)
+    sillRight.castShadow = true
+    group.add(sillRight)
+
+    const headerFront = new THREE.Mesh(this._carGeo.headerWide, frameMat)
+    headerFront.position.set(0, baseY + 0.6, 1.8)
+    headerFront.castShadow = true
+    group.add(headerFront)
+
+    const headerRear = new THREE.Mesh(this._carGeo.headerWide, frameMat)
+    headerRear.position.set(0, baseY + 0.6, -1.85)
+    headerRear.castShadow = true
+    group.add(headerRear)
+
+    const roof = new THREE.Mesh(this._carGeo.roofPanelWide, bodyMat)
+    roof.position.set(0, baseY + 0.69, 0)
+    roof.castShadow = true
+    roof.renderOrder = 1
+    group.add(roof)
+
+    const cargoGlassL = new THREE.Mesh(this._carGeo.vanSideGlassL, glassMat)
+    cargoGlassL.position.set(-0.64, baseY + 0.35, -0.6)
+    cargoGlassL.renderOrder = 3
+    group.add(cargoGlassL)
+
+    const cargoGlassR = new THREE.Mesh(this._carGeo.vanSideGlassL, glassMat)
+    cargoGlassR.position.set(0.64, baseY + 0.35, -0.6)
+    cargoGlassR.renderOrder = 3
+    group.add(cargoGlassR)
+
+    const cargoGlassRear = new THREE.Mesh(this._carGeo.vanRearGlass, glassMat)
+    cargoGlassRear.position.set(0, baseY + 0.35, -1.96)
+    cargoGlassRear.renderOrder = 3
+    group.add(cargoGlassRear)
   }
 
   _addWheels(group, tireMat, rimMat, hubMat, radius, positions) {
@@ -765,13 +1040,13 @@ export class VehicleBuilder {
   }
 
   _createCarGeometry() {
-    const sedanBody = (() => {
+    const sedanBodyLower = (() => {
       const shape = new THREE.Shape()
       shape.moveTo(-0.7, 0)
       shape.lineTo(-0.7, 0.25)
-      shape.quadraticCurveTo(-0.7, 0.5, -0.5, 0.55)
-      shape.lineTo(0.5, 0.55)
-      shape.quadraticCurveTo(0.7, 0.5, 0.7, 0.25)
+      shape.quadraticCurveTo(-0.7, 0.4, -0.48, 0.45)
+      shape.lineTo(0.48, 0.45)
+      shape.quadraticCurveTo(0.7, 0.4, 0.7, 0.25)
       shape.lineTo(0.7, 0)
       shape.lineTo(-0.7, 0)
       const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.2, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 4 })
@@ -779,25 +1054,25 @@ export class VehicleBuilder {
       return geo
     })()
 
-    const sedanCabin = (() => {
+    const sedanGlassCabin = (() => {
       const shape = new THREE.Shape()
-      shape.moveTo(-0.55, 0)
-      shape.lineTo(-0.45, 0.35)
-      shape.quadraticCurveTo(0, 0.5, 0.45, 0.35)
-      shape.lineTo(0.55, 0)
-      shape.lineTo(-0.55, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.5, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 3 })
-      geo.translate(0, 0, -0.75)
+      shape.moveTo(-0.48, 0)
+      shape.lineTo(-0.4, 0.35)
+      shape.quadraticCurveTo(0, 0.5, 0.4, 0.35)
+      shape.lineTo(0.48, 0)
+      shape.lineTo(-0.48, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 2.8, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02, bevelSegments: 2 })
+      geo.translate(0, 0, -1.4)
       return geo
     })()
 
-    const suvBody = (() => {
+    const suvBodyLower = (() => {
       const shape = new THREE.Shape()
       shape.moveTo(-0.8, 0)
       shape.lineTo(-0.8, 0.35)
-      shape.quadraticCurveTo(-0.8, 0.65, -0.6, 0.7)
-      shape.lineTo(0.6, 0.7)
-      shape.quadraticCurveTo(0.8, 0.65, 0.8, 0.35)
+      shape.quadraticCurveTo(-0.8, 0.5, -0.58, 0.58)
+      shape.lineTo(0.58, 0.58)
+      shape.quadraticCurveTo(0.8, 0.5, 0.8, 0.35)
       shape.lineTo(0.8, 0)
       shape.lineTo(-0.8, 0)
       const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.6, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 4 })
@@ -805,25 +1080,25 @@ export class VehicleBuilder {
       return geo
     })()
 
-    const suvCabin = (() => {
+    const suvGlassCabin = (() => {
       const shape = new THREE.Shape()
-      shape.moveTo(-0.65, 0)
-      shape.lineTo(-0.6, 0.55)
-      shape.quadraticCurveTo(0, 0.65, 0.6, 0.55)
-      shape.lineTo(0.65, 0)
-      shape.lineTo(-0.65, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 2.0, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 3 })
-      geo.translate(0, 0, -1.0)
+      shape.moveTo(-0.58, 0)
+      shape.lineTo(-0.5, 0.55)
+      shape.quadraticCurveTo(0, 0.65, 0.5, 0.55)
+      shape.lineTo(0.58, 0)
+      shape.lineTo(-0.58, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.3, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 })
+      geo.translate(0, 0, -1.65)
       return geo
     })()
 
-    const vanBody = (() => {
+    const vanBodyLower = (() => {
       const shape = new THREE.Shape()
       shape.moveTo(-0.9, 0)
       shape.lineTo(-0.9, 0.5)
-      shape.quadraticCurveTo(-0.9, 0.9, -0.7, 0.95)
-      shape.lineTo(0.7, 0.95)
-      shape.quadraticCurveTo(0.9, 0.9, 0.9, 0.5)
+      shape.lineTo(-0.65, 0.7)
+      shape.lineTo(0.65, 0.7)
+      shape.lineTo(0.9, 0.5)
       shape.lineTo(0.9, 0)
       shape.lineTo(-0.9, 0)
       const geo = new THREE.ExtrudeGeometry(shape, { depth: 4.0, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 4 })
@@ -831,17 +1106,39 @@ export class VehicleBuilder {
       return geo
     })()
 
-    const vanCabin = (() => {
+    const vanGlassCabin = (() => {
       const shape = new THREE.Shape()
-      shape.moveTo(-0.75, 0)
-      shape.lineTo(-0.7, 0.6)
-      shape.quadraticCurveTo(0, 0.7, 0.7, 0.6)
-      shape.lineTo(0.75, 0)
-      shape.lineTo(-0.75, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.3, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 3 })
+      shape.moveTo(-0.65, 0)
+      shape.lineTo(-0.58, 0.6)
+      shape.quadraticCurveTo(0, 0.7, 0.58, 0.6)
+      shape.lineTo(0.65, 0)
+      shape.lineTo(-0.65, 0)
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.3, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 })
       geo.translate(0, 0, -0.65)
       return geo
     })()
+
+    const vanRearGlass = (() => {
+      const geo = new THREE.BoxGeometry(1.3, 0.7, 0.02)
+      return geo
+    })()
+
+    const vanSideGlassL = (() => {
+      const geo = new THREE.BoxGeometry(0.02, 0.7, 2.3)
+      return geo
+    })()
+
+    const pillarA = new THREE.BoxGeometry(0.06, 0.42, 0.06)
+    const pillarB = new THREE.BoxGeometry(0.05, 0.45, 0.06)
+    const pillarC = new THREE.BoxGeometry(0.06, 0.42, 0.06)
+    const roofRail = new THREE.BoxGeometry(0.04, 0.04, 2.5)
+    const roofRailLong = new THREE.BoxGeometry(0.04, 0.04, 3.0)
+    const sill = new THREE.BoxGeometry(0.04, 0.05, 2.5)
+    const sillLong = new THREE.BoxGeometry(0.04, 0.05, 3.0)
+    const header = new THREE.BoxGeometry(0.85, 0.04, 0.04)
+    const headerWide = new THREE.BoxGeometry(1.1, 0.04, 0.04)
+    const roofPanel = new THREE.BoxGeometry(0.8, 0.02, 2.5)
+    const roofPanelWide = new THREE.BoxGeometry(1.05, 0.02, 3.0)
 
     const wheelTire = (() => {
       const geo = new THREE.CylinderGeometry(1, 1, 0.22, 32, 1, false)
@@ -930,12 +1227,25 @@ export class VehicleBuilder {
     const licensePlate = new THREE.BoxGeometry(0.4, 0.12, 0.02)
 
     return {
-      sedanBody,
-      sedanCabin,
-      suvBody,
-      suvCabin,
-      vanBody,
-      vanCabin,
+      sedanBody: sedanBodyLower,
+      sedanCabin: sedanGlassCabin,
+      suvBody: suvBodyLower,
+      suvCabin: suvGlassCabin,
+      vanBody: vanBodyLower,
+      vanCabin: vanGlassCabin,
+      vanRearGlass,
+      vanSideGlassL,
+      pillarA,
+      pillarB,
+      pillarC,
+      roofRail,
+      roofRailLong,
+      sill,
+      sillLong,
+      header,
+      headerWide,
+      roofPanel,
+      roofPanelWide,
       wheelTire,
       wheelTireSide,
       wheelRim,
