@@ -317,3 +317,124 @@
 - `wheelWellFront/Rear` - 前后轮拱（半圆ExtrudeGeometry）
 - `exhaust` - 排气管
 - `licensePlate` - 车牌
+
+### 2026-06-10 Bug修复：内饰数据关联异常 & 车轮动画缺失
+
+#### Bug 5：车辆内饰添加功能异常
+
+- **问题表现**
+  - 内饰组件（座椅、方向盘、仪表台、车牌等）虽然被添加到了 3D 场景中，但系统无法追踪这些组件属于哪辆车
+  - 内饰配置数据（座位数、座椅颜色、仪表台颜色等）未被结构化保存
+  - 无法通过 `carData` 或 `group.userData` 访问到内饰信息
+  - 前端查询或调试时无法关联车辆与内饰的对应关系
+  - 复现步骤：创建任意车辆 → 检查 `this.cars[0]` → 无 `interior` 字段 → 检查 `group.userData` → 无内饰相关数据
+
+- **根因分析**
+  1. `_addInterior` 方法没有返回值，创建的 mesh 引用全部丢失在方法局部作用域中
+  2. `_buildSedan/Suv/Van` 三个车型构建方法没有返回 `wheelGroups` 和 `interiorData`
+  3. `createCar` 调用 `_buildXxx` 时没有接收返回值，也没有将内饰信息写入 `carData` 或 `userData`
+  4. 内饰 mesh 没有设置 `name` 属性，即使通过 `group.children` 遍历也难以识别
+  5. 缺少数据验证：没有 `hasInterior` 标志位，无法快速判断某车辆是否已成功添加内饰
+
+- **修复方案**（代码变更点）
+  1. `_addInterior` 方法改为返回 `interiorData` 对象，包含三部分：
+     - `config`：配置数据（floorY, seatY, seatSpacing, rearSeatCount, seatColor, dashColor）
+     - `meshes`：所有内饰 mesh 的引用（driverSeat, passengerSeat, rearSeats, steeringWheel, dashboard, licensePlate 等）
+     - `materials`：内饰材质引用（便于后续动态修改颜色）
+  2. 所有内饰 mesh 增加 `name` 属性（如 `'driverSeat'`, `'rearSeat_0'`, `'steeringWheel'`）
+  3. `_buildSedan/_buildSuv/_buildVan` 改为返回 `{ wheelGroups, interiorData }` 对象
+  4. `_addWheels` 方法返回 `wheelGroups` 数组，每个 wheelGroup 设置 `name='wheel'`，并在 `userData.radius` 中保存轮胎半径
+  5. `createCar` 方法接收 `buildResult`，解构出 `wheelGroups` 和 `interiorData`
+  6. `carData` 结构增加字段：
+     - `wheelGroups`: 车轮 Group 数组（用于动画控制）
+     - `interior`: 完整 interiorData 对象
+     - `wheelRotation`: 当前车轮旋转角度累加值
+  7. `group.userData` 写入内饰元数据：
+     - `userData.interiorConfig`: 内饰配置快照
+     - `userData.interiorMeshes`: 内饰 mesh 引用
+     - `userData.hasInterior`: Boolean 标志，便于数据验证
+
+- **测试验证方法及结果**
+  - **数据完整性验证**：`createCar` 后检查 `carData.interior !== null`，`carData.interior.config.rearSeatCount` 与车型匹配（sedan=2, suv=3, van=2）
+  - **Mesh 引用验证**：`carData.interior.meshes.driverSeat instanceof THREE.Mesh` 为 true，且 `driverSeat.parent === carData.group`
+  - **userData 关联验证**：`group.userData.hasInterior === true`，`group.userData.interiorConfig.seatColor` 为有效十六进制颜色值
+  - **遍历验证**：通过 `group.getObjectByName('steeringWheel')` 能正确获取方向盘 mesh
+  - **测试结果**：所有 26 个现有单元测试通过，`npm run build` 构建成功无报错
+
+- **预防改进建议**
+  1. 所有 `_addXxx` 类型的辅助方法都应返回创建对象的引用，避免内存中"孤儿 mesh"
+  2. 建立统一的数据关联规范：所有动态组件（内饰、灯光、特效等）必须同时写入 `carData`（内部逻辑用）和 `group.userData`（外部查询用）
+  3. 新增 `validateCar(carData)` 数据完整性校验方法，在 `createCar` 返回前断言必须字段存在
+  4. 建立 mesh 命名规范：`{组件位置}_{组件类型}_{索引}`，例如 `rearSeat_0`, `frontLeft_doorHandle`
+
+---
+
+#### Bug 6：车辆运动时车轮动画缺失
+
+- **问题表现**
+  - 车辆沿路径行驶时，四个车轮保持静止不旋转，与车身移动状态明显不符
+  - 无论车速快慢、前进或倒车，车轮均无任何旋转动画
+  - 缺乏真实物理运动感，视觉上像"轮子被拖着走"
+  - 复现步骤：启动场景 → 观察任意行驶中的车辆 → 轮胎相对于车身完全静止
+
+- **根因分析**
+  1. **数据链路断裂**：`_addWheels` 创建了 `wheelGroup` 但未保存引用，`carData` 中没有 `wheelGroups` 字段，动画循环无法访问车轮
+  2. **动画逻辑缺失**：`updateAnimation` 方法只更新了车辆 `group.position` 和 `group.rotation.y`，没有车轮旋转代码
+  3. **速度-转速未关联**：缺少角速度计算公式，无法根据车速和轮胎半径计算旋转角度
+  4. **方向未同步**：车辆倒车（direction = -1）时，车轮未反向旋转
+  5. **层级结构缺陷**（修复过程中发现）：原设计将 `rotation.z = PI/2` 直接施加在 tire/rim/hub 每个子 mesh 上，然后在 `wheelGroup` 上叠加 `rotation.x`，但 Three.js 中父节点变换先于子节点局部变换（矩阵右乘），导致旋转顺序错误（滚动变换与站立变换顺序颠倒）
+
+- **修复方案**（代码变更点）
+  1. **数据链路修复**：
+     - `_addWheels` 返回 `wheelGroups` 数组
+     - `carData` 新增 `wheelGroups: wheelGroups || []` 和 `wheelRotation: 0`
+     - 每个 wheelGroup 保存 `userData.radius = radius`，供角速度公式使用
+
+  2. **层级结构重构**（修复旋转顺序 Bug）：
+     - 在 `wheelGroup` 内部新增 `innerGroup`，`innerGroup.rotation.z = PI/2` 负责让轮胎"站立"
+     - 所有 tire/rim/hub 子 mesh 不再设置自身 `rotation.z`，改为挂载到 `innerGroup` 下
+     - `wheelGroup` 本身不做站立旋转，仅负责滚动旋转 `rotation.x`
+     - 最终变换顺序：先 `innerGroup` 的 Rz(PI/2) 站立 → 再 `wheelGroup` 的 Rx(θ) 滚动，符合物理直觉
+
+  3. **动画逻辑实现**（在 `updateAnimation` 的 cars 循环中新增）：
+     ```javascript
+     if (car.wheelGroups && car.wheelGroups.length > 0) {
+       const wheelRadius = car.wheelGroups[0].userData.radius || 0.35
+       const angularSpeed = (clampedDelta * car.speed * 0.5) / Math.max(wheelRadius, 0.01)
+       car.wheelRotation += angularSpeed * car.direction
+       for (const wheel of car.wheelGroups) {
+         wheel.rotation.x = car.wheelRotation
+       }
+     }
+     ```
+     - `angularSpeed = 线速度 / 半径`：符合真实物理运动学公式 v = ωr
+     - `* car.direction`：前进正向旋转，倒车反向旋转
+     - `clampedDelta`：沿用已有的帧时间裁剪，保证动画速度稳定
+
+- **测试验证方法及结果**
+  - **静态测试**：`wheelGroups.length === 4`，每个 `wheelGroup.children[0]` 是 `innerGroup`
+  - **旋转轴验证**：innerGroup.rotation.z ≈ 1.5708 (PI/2)，wheelGroup.rotation.x 初始为 0
+  - **动画测试**：调用 `updateAnimation(0.016, elapsed)` 100 次，检查 `car.wheelRotation` 是否单调递增（direction=1）或递减（direction=-1）
+  - **物理正确性**：speed=2, radius=0.35, delta=0.016 时，每帧角速度 ≈ (0.016*2*0.5)/0.35 ≈ 0.0457 rad/frame，与实际计算值一致
+  - **倒车测试**：设置 `car.direction = -1` 后，车轮旋转方向反向
+  - **测试结果**：所有 26 个单元测试通过，`npm run build` 构建成功
+
+- **预防改进建议**
+  1. 建立动画开发 checklist：新增运动物体时，必须同步考虑「主体运动 + 子部件联动动画 + 物理正确性」
+  2. 复杂层级旋转必须画变换树（transform tree），明确每个节点的旋转顺序和局部坐标系
+  3. 角速度计算统一封装为工具函数 `angularSpeedFromLinear(linearSpeed, radius)`，避免多处重复公式出错
+  4. 新增视觉回归测试：使用像素快照对比，防止动画缺失类 Bug 在代码审查中被遗漏
+  5. 车速与车轮转速的比例系数 `0.5` 提取为常量 `WHEEL_ROTATION_SPEED_FACTOR`，便于统一调参
+
+---
+
+### 后续修改记录规范
+
+> **所有后续对 3D 模型、动画、材质、配置等的修改，均需按以下结构追加记录到本文件**
+
+- **修改日期**：YYYY-MM-DD
+- **问题/需求描述**：具体表现 + 复现步骤
+- **根因分析**：技术层面的深层原因
+- **修复方案**：关键代码变更点（引用文件和行号）
+- **验证方法**：测试步骤 + 预期结果
+- **改进建议**：预防同类问题的措施
