@@ -984,6 +984,85 @@
 
 ---
 
+### 2026-06-11 人物模型脸部缺失 & 方块拼凑感 & 关节空隙 全面修复
+
+#### Bug 1：脸部元素缺失（数学推导定位）
+
+- **问题表现**：人物模型脸部无眼睛、鼻子、嘴巴等特征
+- **根因分析**（球面方程推导）：
+  1. 头部球体：SphereGeometry(0.15)，球心在headGroup局部坐标 y=0.15
+  2. 头部球面方程：x² + (y-0.15)² + z² = 0.15² = 0.0225
+  3. 旧的眼睛位置：(-0.045, 0.18, 0.12)
+  4. 代入球面方程：0.045² + (0.18-0.15)² + 0.12² = 0.002025 + 0.0009 + 0.0144 = 0.017325
+  5. **0.017325 < 0.0225**，眼睛在球体内部！距球面 0.027，完全被头部遮挡
+  6. 同理，鼻子z=0.145也基本在球面内，嘴巴z=0.14也靠近球面
+- **修复方案**：
+  - 使用球面方程动态计算每个面部特征的精确z坐标：z = √(r² - x² - (y-centerY)²)
+  - 面部特征z坐标 = 球面z + 微小偏移（确保露出表面）
+  - 眼睛：z = √(0.15² - 0.045² - 0.025²) + 0.005 ≈ 0.147
+  - 鼻子：z = √(0.15² - 0.02²) + 0.008 ≈ 0.157
+  - 嘴巴：z = √(0.15² - 0.06²) + 0.003 ≈ 0.140
+- **新增面部特征**：
+  - **虹膜(Iris)**：SphereGeometry(0.013)，多种颜色随机（绿/棕/蓝/灰）
+  - **瞳孔(Pupil)**：SphereGeometry(0.007)，纯黑高反光
+  - **眉毛(Eyebrow)**：CapsuleGeometry(0.004, 0.035)，用头发材质
+  - **耳朵(Ear)**：CapsuleGeometry(0.015, 0.025)，扁平化
+  - **眼球材质升级**：白色巩膜+clearcoat → 虹膜+clearcoat → 瞳孔+高金属感
+
+#### Bug 2：方块拼凑感（拓扑结构重写）
+
+- **问题表现**：人物模型由明显方块和圆柱拼凑，棱角分明
+- **根因分析**：
+  1. 躯干用变形BoxGeometry，保留6面体棱角
+  2. 手部用BoxGeometry(0.08×0.03×0.1)，方形手掌
+  3. 脚部用BoxGeometry(0.1×0.06×0.18)，方形鞋
+  4. 嘴巴用BoxGeometry，鼻子用ConeGeometry，都不自然
+  5. 斜方肌用BoxGeometry，肌腱感缺失
+- **修复方案**（全量替换为圆滑几何体）：
+
+  | 部件 | 修复前 | 修复后 | 效果 |
+  |-----|-------|-------|------|
+  | 躯干 | BoxGeometry(变形) | **CapsuleGeometry(0.14, 0.3) + 锥形变形** | 圆柱形躯干，肩窄腰宽 |
+  | 头部 | SphereGeometry | **SphereGeometry + 下巴变形** | 削减下巴凸出 |
+  | 上臂 | CylinderGeometry | **CapsuleGeometry(0.04, 0.16)** | 圆滑端盖 |
+  | 前臂 | CylinderGeometry | **CapsuleGeometry(0.032, 0.16)** | 圆滑端盖 |
+  | 手掌 | BoxGeometry | **CapsuleGeometry(0.028, 0.04) ×1.4×1.8** | 椭圆手掌 |
+  | 手指 | CylinderGeometry | **CapsuleGeometry(0.008, 0.025)** | 圆润指节 |
+  | 大腿 | CylinderGeometry | **CapsuleGeometry(0.055, 0.18)** | 圆滑端盖 |
+  | 小腿 | CylinderGeometry | **CapsuleGeometry(0.04, 0.18)** | 圆滑端盖 |
+  | 脚部 | BoxGeometry | **CapsuleGeometry(0.035, 0.06) ×1.4×2.2** | 椭圆鞋形 |
+  | 嘴巴 | BoxGeometry | **CapsuleGeometry(0.008, 0.022) ×0.5** | 自然唇形 |
+  | 鼻子 | ConeGeometry | **CapsuleGeometry(0.012, 0.02) ×0.8** | 圆润鼻形 |
+  | 斜方肌 | BoxGeometry | **CapsuleGeometry(0.06, 0.15)** | 肌腱圆滑 |
+  | 头发 | SphereGeometry | **SphereGeometry + 正弦噪声** | 自然蓬松 |
+
+#### Bug 3：关节空隙（球形关节球填充）
+
+- **问题表现**：上臂/前臂、大腿/小腿之间有明显缝隙
+- **根因分析**：CylinderGeometry端面半径不匹配，旋转时端面分离
+- **修复方案**：在所有关节处添加球形关节球
+
+  | 关节 | 球体 | 半径 | 作用 |
+  |-----|------|------|------|
+  | 肩关节 | SphereGeometry | 0.055 | 填充躯干-上臂间隙 |
+  | 肘关节 | SphereGeometry | 0.038 | 填充上臂-前臂间隙 |
+  | 髋关节 | SphereGeometry | 0.065 | 填充骨盆-大腿间隙 |
+  | 膝关节 | SphereGeometry | 0.045 | 填充大腿-小腿间隙 |
+
+#### 材质渲染优化
+
+  | 材质 | 优化前 | 优化后 |
+  |-----|-------|-------|
+  | 皮肤 | roughness=0.4, clearcoat=0.2 | roughness=0.35, clearcoat=0.15, **thickness=0.5, transmission=0.02** (次表面散射) |
+  | 衣物 | MeshStandardMaterial | **MeshPhysicalMaterial + sheen** (织物光泽) |
+  | 眼球 | 黑色MeshStandardMaterial | **白色MeshPhysicalMaterial + clearcoat=1.0** (高光反射) |
+  | 虹膜 | 无 | **MeshPhysicalMaterial + clearcoat=0.8** (玻璃质感) |
+
+#### 修改文件清单
+1. `src/three/builders/PedestrianBuilder.js` - 完整重写几何体、面部特征、关节球、材质
+
+---
+
 ### 后续修改记录规范
 
 > **所有后续对 3D 模型、动画、材质、配置等的修改，均需按以下结构追加记录到本文件**
