@@ -128,8 +128,12 @@ export class PedestrianBuilder {
       neck: highDetail.getObjectByName('neck'),
       leftLeg: highDetail.getObjectByName('leftLeg'),
       rightLeg: highDetail.getObjectByName('rightLeg'),
+      leftCalf: highDetail.getObjectByName('leftCalf'),
+      rightCalf: highDetail.getObjectByName('rightCalf'),
       leftArm: highDetail.getObjectByName('leftArm'),
       rightArm: highDetail.getObjectByName('rightArm'),
+      leftForearm: highDetail.getObjectByName('leftForearm'),
+      rightForearm: highDetail.getObjectByName('rightForearm'),
       leftHand: highDetail.getObjectByName('leftHand'),
       rightHand: highDetail.getObjectByName('rightHand'),
       leftFoot: highDetail.getObjectByName('leftFoot'),
@@ -300,39 +304,49 @@ export class PedestrianBuilder {
     const group = new THREE.Group()
     group.name = 'highDetail'
 
+    const pelvis = new THREE.Group()
+    pelvis.position.y = 0.72
+    pelvis.name = 'pelvis'
+    group.add(pelvis)
+
     const torso = new THREE.Mesh(this._highGeo.torso, materials.body)
-    torso.position.y = 1.0
+    torso.position.y = 0.28
     torso.name = 'torso'
     torso.castShadow = true
-    group.add(torso)
+    pelvis.add(torso)
 
-    this._buildNeck(group, materials)
+    const neckGroup = this._buildNeck(materials)
+    neckGroup.position.y = 0.58
+    torso.add(neckGroup)
+
+    const headGroup = new THREE.Group()
+    headGroup.position.y = 0.18
+    headGroup.name = 'headGroup'
+    neckGroup.add(headGroup)
 
     const head = new THREE.Mesh(this._highGeo.head, materials.skin)
-    head.position.y = 1.68
+    head.position.y = 0.08
     head.name = 'head'
     head.castShadow = true
-    group.add(head)
+    headGroup.add(head)
 
-    this._buildFacialFeatures(group, materials)
+    this._buildFacialFeatures(headGroup, materials)
 
     const hair = new THREE.Mesh(this._highGeo.hair, materials.hair)
-    hair.position.y = 1.68
+    hair.position.y = 0.08
     hair.castShadow = true
-    group.add(hair)
+    headGroup.add(hair)
 
-    this._buildClothing(group, materials)
-
-    this._buildLegs(group, materials)
-    this._buildArmsAndHands(group, materials)
+    this._buildClothing(pelvis, torso, materials)
+    this._buildLegs(pelvis, materials)
+    this._buildArmsAndHands(torso, materials)
 
     return group
   }
 
-  _buildNeck(group, materials) {
+  _buildNeck(materials) {
     const neckGroup = new THREE.Group()
     neckGroup.name = 'neck'
-    neckGroup.position.y = 1.35
 
     const neckCurvePoints = []
     for (let i = 0; i < 4; i++) {
@@ -378,121 +392,153 @@ export class PedestrianBuilder {
     trapezius.castShadow = true
     neckGroup.add(trapezius)
 
-    group.add(neckGroup)
+    return neckGroup
   }
 
-  _buildFacialFeatures(group, materials) {
+  _buildFacialFeatures(headGroup, materials) {
     const leftEye = new THREE.Mesh(this._highGeo.eye, materials.eye)
-    leftEye.position.set(-0.045, 1.72, 0.13)
-    group.add(leftEye)
+    leftEye.position.set(-0.045, 0.05, 0.13)
+    headGroup.add(leftEye)
 
     const rightEye = new THREE.Mesh(this._highGeo.eye, materials.eye)
-    rightEye.position.set(0.045, 1.72, 0.13)
-    group.add(rightEye)
+    rightEye.position.set(0.045, 0.05, 0.13)
+    headGroup.add(rightEye)
 
     const nose = new THREE.Mesh(this._highGeo.nose, materials.nose)
-    nose.position.set(0, 1.66, 0.145)
+    nose.position.set(0, -0.01, 0.145)
     nose.rotation.x = Math.PI / 2
-    group.add(nose)
+    headGroup.add(nose)
 
     const mouth = new THREE.Mesh(this._highGeo.mouth, materials.mouth)
-    mouth.position.set(0, 1.6, 0.14)
-    group.add(mouth)
+    mouth.position.set(0, -0.07, 0.14)
+    headGroup.add(mouth)
   }
 
-  _buildClothing(group, materials) {
+  _buildClothing(pelvis, torso, materials) {
     const collar = new THREE.Mesh(this._highGeo.collar, materials.collar)
-    collar.position.y = 1.32
+    collar.position.y = 0.54
     collar.rotation.x = Math.PI / 2
     collar.castShadow = true
-    group.add(collar)
+    torso.add(collar)
 
     const belt = new THREE.Mesh(this._highGeo.belt, materials.belt)
-    belt.position.y = 0.75
+    belt.position.y = 0.03
     belt.castShadow = true
-    group.add(belt)
+    pelvis.add(belt)
 
     for (let i = 0; i < 3; i++) {
       const button = new THREE.Mesh(this._highGeo.button, materials.button)
-      button.position.set(0, 1.15 - i * 0.12, 0.115)
+      button.position.set(0, 0.37 - i * 0.12, 0.115)
       button.rotation.x = Math.PI / 2
       button.castShadow = true
-      group.add(button)
+      torso.add(button)
     }
   }
 
-  _buildLegs(group, materials) {
-    const leftThigh = new THREE.Mesh(this._highGeo.thigh, materials.pants)
-    leftThigh.position.set(-0.13, 0.58, 0)
-    leftThigh.name = 'leftLeg'
-    leftThigh.castShadow = true
-    group.add(leftThigh)
+  _buildLegs(pelvis, materials) {
+    const leftLeg = new THREE.Group()
+    leftLeg.position.set(-0.13, 0, 0)
+    leftLeg.name = 'leftLeg'
+    pelvis.add(leftLeg)
 
-    const leftCalf = new THREE.Mesh(this._highGeo.calf, materials.pants)
-    leftCalf.position.set(-0.13, 0.28, 0)
+    const leftThigh = new THREE.Mesh(this._highGeo.thigh, materials.pants)
+    leftThigh.position.y = -0.14
+    leftThigh.castShadow = true
+    leftLeg.add(leftThigh)
+
+    const leftCalf = new THREE.Group()
+    leftCalf.position.y = -0.28
     leftCalf.name = 'leftCalf'
-    leftCalf.castShadow = true
-    group.add(leftCalf)
+    leftLeg.add(leftCalf)
+
+    const leftCalfMesh = new THREE.Mesh(this._highGeo.calf, materials.pants)
+    leftCalfMesh.position.y = -0.14
+    leftCalfMesh.castShadow = true
+    leftCalf.add(leftCalfMesh)
 
     const leftFoot = new THREE.Mesh(this._highGeo.foot, materials.shoe)
-    leftFoot.position.set(-0.13, 0.1, 0.04)
+    leftFoot.position.set(0, -0.25, 0.04)
     leftFoot.name = 'leftFoot'
     leftFoot.castShadow = true
-    group.add(leftFoot)
+    leftCalf.add(leftFoot)
+
+    const rightLeg = new THREE.Group()
+    rightLeg.position.set(0.13, 0, 0)
+    rightLeg.name = 'rightLeg'
+    pelvis.add(rightLeg)
 
     const rightThigh = new THREE.Mesh(this._highGeo.thigh, materials.pants)
-    rightThigh.position.set(0.13, 0.58, 0)
-    rightThigh.name = 'rightLeg'
+    rightThigh.position.y = -0.14
     rightThigh.castShadow = true
-    group.add(rightThigh)
+    rightLeg.add(rightThigh)
 
-    const rightCalf = new THREE.Mesh(this._highGeo.calf, materials.pants)
-    rightCalf.position.set(0.13, 0.28, 0)
+    const rightCalf = new THREE.Group()
+    rightCalf.position.y = -0.28
     rightCalf.name = 'rightCalf'
-    rightCalf.castShadow = true
-    group.add(rightCalf)
+    rightLeg.add(rightCalf)
+
+    const rightCalfMesh = new THREE.Mesh(this._highGeo.calf, materials.pants)
+    rightCalfMesh.position.y = -0.14
+    rightCalfMesh.castShadow = true
+    rightCalf.add(rightCalfMesh)
 
     const rightFoot = new THREE.Mesh(this._highGeo.foot, materials.shoe)
-    rightFoot.position.set(0.13, 0.1, 0.04)
+    rightFoot.position.set(0, -0.25, 0.04)
     rightFoot.name = 'rightFoot'
     rightFoot.castShadow = true
-    group.add(rightFoot)
+    rightCalf.add(rightFoot)
   }
 
-  _buildArmsAndHands(group, materials) {
-    const leftUpperArm = new THREE.Mesh(this._highGeo.upperArm, materials.body)
-    leftUpperArm.position.set(-0.32, 1.2, 0)
-    leftUpperArm.name = 'leftArm'
-    leftUpperArm.castShadow = true
-    group.add(leftUpperArm)
+  _buildArmsAndHands(torso, materials) {
+    const leftArm = new THREE.Group()
+    leftArm.position.set(-0.24, 0.42, 0)
+    leftArm.name = 'leftArm'
+    torso.add(leftArm)
 
-    const leftForearm = new THREE.Mesh(this._highGeo.forearm, materials.body)
-    leftForearm.position.set(-0.32, 0.98, 0)
+    const leftUpperArm = new THREE.Mesh(this._highGeo.upperArm, materials.body)
+    leftUpperArm.position.y = -0.11
+    leftUpperArm.castShadow = true
+    leftArm.add(leftUpperArm)
+
+    const leftForearm = new THREE.Group()
+    leftForearm.position.y = -0.22
     leftForearm.name = 'leftForearm'
-    leftForearm.castShadow = true
-    group.add(leftForearm)
+    leftArm.add(leftForearm)
+
+    const leftForearmMesh = new THREE.Mesh(this._highGeo.forearm, materials.body)
+    leftForearmMesh.position.y = -0.11
+    leftForearmMesh.castShadow = true
+    leftForearm.add(leftForearmMesh)
 
     const leftHand = this._buildHand('left', materials)
-    leftHand.position.set(-0.32, 0.75, 0)
+    leftHand.position.set(0, -0.23, 0)
     leftHand.name = 'leftHand'
-    group.add(leftHand)
+    leftForearm.add(leftHand)
+
+    const rightArm = new THREE.Group()
+    rightArm.position.set(0.24, 0.42, 0)
+    rightArm.name = 'rightArm'
+    torso.add(rightArm)
 
     const rightUpperArm = new THREE.Mesh(this._highGeo.upperArm, materials.body)
-    rightUpperArm.position.set(0.32, 1.2, 0)
-    rightUpperArm.name = 'rightArm'
+    rightUpperArm.position.y = -0.11
     rightUpperArm.castShadow = true
-    group.add(rightUpperArm)
+    rightArm.add(rightUpperArm)
 
-    const rightForearm = new THREE.Mesh(this._highGeo.forearm, materials.body)
-    rightForearm.position.set(0.32, 0.98, 0)
+    const rightForearm = new THREE.Group()
+    rightForearm.position.y = -0.22
     rightForearm.name = 'rightForearm'
-    rightForearm.castShadow = true
-    group.add(rightForearm)
+    rightArm.add(rightForearm)
+
+    const rightForearmMesh = new THREE.Mesh(this._highGeo.forearm, materials.body)
+    rightForearmMesh.position.y = -0.11
+    rightForearmMesh.castShadow = true
+    rightForearm.add(rightForearmMesh)
 
     const rightHand = this._buildHand('right', materials)
-    rightHand.position.set(0.32, 0.75, 0)
+    rightHand.position.set(0, -0.23, 0)
     rightHand.name = 'rightHand'
-    group.add(rightHand)
+    rightForearm.add(rightHand)
   }
 
   _buildHand(side, materials) {
@@ -575,112 +621,132 @@ export class PedestrianBuilder {
     const group = new THREE.Group()
     group.name = 'mediumDetail'
 
+    const pelvis = new THREE.Group()
+    pelvis.position.y = 0.72
+    group.add(pelvis)
+
     const torso = new THREE.Mesh(this._mediumGeo.torso, materials.body)
-    torso.position.y = 1.0
+    torso.position.y = 0.28
     torso.name = 'torso'
     torso.castShadow = true
-    group.add(torso)
+    pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._mediumGeo.neck, materials.skin)
-    neck.position.y = 1.38
+    neck.position.y = 0.62
     neck.name = 'neck'
     neck.castShadow = true
-    group.add(neck)
+    torso.add(neck)
 
     const head = new THREE.Mesh(this._mediumGeo.head, materials.skin)
-    head.position.y = 1.68
+    head.position.y = 0.24
     head.name = 'head'
     head.castShadow = true
-    group.add(head)
+    neck.add(head)
 
     const hair = new THREE.Mesh(this._mediumGeo.hair, materials.hair)
-    hair.position.y = 1.68
+    hair.position.y = 0.0
     hair.castShadow = true
-    group.add(hair)
+    head.add(hair)
 
     const leftEye = new THREE.Mesh(this._mediumGeo.eye, materials.eye)
-    leftEye.position.set(-0.045, 1.72, 0.13)
-    group.add(leftEye)
+    leftEye.position.set(-0.045, 0.05, 0.13)
+    head.add(leftEye)
 
     const rightEye = new THREE.Mesh(this._mediumGeo.eye, materials.eye)
-    rightEye.position.set(0.045, 1.72, 0.13)
-    group.add(rightEye)
+    rightEye.position.set(0.045, 0.05, 0.13)
+    head.add(rightEye)
 
     const nose = new THREE.Mesh(this._mediumGeo.nose, materials.nose)
-    nose.position.set(0, 1.66, 0.145)
+    nose.position.set(0, -0.01, 0.145)
     nose.rotation.x = Math.PI / 2
-    group.add(nose)
+    head.add(nose)
 
     const mouth = new THREE.Mesh(this._mediumGeo.mouth, materials.mouth)
-    mouth.position.set(0, 1.6, 0.14)
-    group.add(mouth)
+    mouth.position.set(0, -0.07, 0.14)
+    head.add(mouth)
 
     const collar = new THREE.Mesh(this._mediumGeo.collar, materials.collar)
-    collar.position.y = 1.32
+    collar.position.y = 0.54
     collar.rotation.x = Math.PI / 2
     collar.castShadow = true
-    group.add(collar)
+    torso.add(collar)
 
     const belt = new THREE.Mesh(this._mediumGeo.belt, materials.belt)
-    belt.position.y = 0.75
+    belt.position.y = 0.03
     belt.castShadow = true
-    group.add(belt)
+    pelvis.add(belt)
 
     for (let i = 0; i < 3; i++) {
       const button = new THREE.Mesh(this._mediumGeo.button, materials.button)
-      button.position.set(0, 1.15 - i * 0.12, 0.115)
+      button.position.set(0, 0.37 - i * 0.12, 0.115)
       button.rotation.x = Math.PI / 2
       button.castShadow = true
-      group.add(button)
+      torso.add(button)
     }
 
-    const leftLeg = new THREE.Mesh(this._mediumGeo.leg, materials.pants)
-    leftLeg.position.set(-0.13, 0.4, 0)
+    const leftLeg = new THREE.Group()
+    leftLeg.position.set(-0.13, 0, 0)
     leftLeg.name = 'leftLeg'
-    leftLeg.castShadow = true
-    group.add(leftLeg)
+    pelvis.add(leftLeg)
 
-    const rightLeg = new THREE.Mesh(this._mediumGeo.leg, materials.pants)
-    rightLeg.position.set(0.13, 0.4, 0)
-    rightLeg.name = 'rightLeg'
-    rightLeg.castShadow = true
-    group.add(rightLeg)
+    const leftLegMesh = new THREE.Mesh(this._mediumGeo.leg, materials.pants)
+    leftLegMesh.position.y = -0.28
+    leftLegMesh.castShadow = true
+    leftLeg.add(leftLegMesh)
 
     const leftFoot = new THREE.Mesh(this._mediumGeo.foot, materials.shoe)
-    leftFoot.position.set(-0.13, 0.1, 0.04)
+    leftFoot.position.set(0, -0.58, 0.04)
     leftFoot.name = 'leftFoot'
     leftFoot.castShadow = true
-    group.add(leftFoot)
+    leftLeg.add(leftFoot)
+
+    const rightLeg = new THREE.Group()
+    rightLeg.position.set(0.13, 0, 0)
+    rightLeg.name = 'rightLeg'
+    pelvis.add(rightLeg)
+
+    const rightLegMesh = new THREE.Mesh(this._mediumGeo.leg, materials.pants)
+    rightLegMesh.position.y = -0.28
+    rightLegMesh.castShadow = true
+    rightLeg.add(rightLegMesh)
 
     const rightFoot = new THREE.Mesh(this._mediumGeo.foot, materials.shoe)
-    rightFoot.position.set(0.13, 0.1, 0.04)
+    rightFoot.position.set(0, -0.58, 0.04)
     rightFoot.name = 'rightFoot'
     rightFoot.castShadow = true
-    group.add(rightFoot)
+    rightLeg.add(rightFoot)
 
-    const leftArm = new THREE.Mesh(this._mediumGeo.arm, materials.body)
-    leftArm.position.set(-0.32, 1.08, 0)
+    const leftArm = new THREE.Group()
+    leftArm.position.set(-0.24, 0.42, 0)
     leftArm.name = 'leftArm'
-    leftArm.castShadow = true
-    group.add(leftArm)
+    torso.add(leftArm)
 
-    const rightArm = new THREE.Mesh(this._mediumGeo.arm, materials.body)
-    rightArm.position.set(0.32, 1.08, 0)
-    rightArm.name = 'rightArm'
-    rightArm.castShadow = true
-    group.add(rightArm)
+    const leftArmMesh = new THREE.Mesh(this._mediumGeo.arm, materials.body)
+    leftArmMesh.position.y = -0.25
+    leftArmMesh.castShadow = true
+    leftArm.add(leftArmMesh)
 
     const leftHand = new THREE.Mesh(this._mediumGeo.hand, materials.skin)
-    leftHand.position.set(-0.32, 0.8, 0)
+    leftHand.position.set(0, -0.5, 0)
     leftHand.name = 'leftHand'
     leftHand.castShadow = true
-    group.add(leftHand)
+    leftArm.add(leftHand)
+
+    const rightArm = new THREE.Group()
+    rightArm.position.set(0.24, 0.42, 0)
+    rightArm.name = 'rightArm'
+    torso.add(rightArm)
+
+    const rightArmMesh = new THREE.Mesh(this._mediumGeo.arm, materials.body)
+    rightArmMesh.position.y = -0.25
+    rightArmMesh.castShadow = true
+    rightArm.add(rightArmMesh)
 
     const rightHand = new THREE.Mesh(this._mediumGeo.hand, materials.skin)
-    rightHand.position.set(0.32, 0.8, 0)
+    rightHand.position.set(0, -0.5, 0)
     rightHand.name = 'rightHand'
     rightHand.castShadow = true
-    group.add(rightHand)
+    rightArm.add(rightHand)
 
     return group
   }
@@ -689,66 +755,96 @@ export class PedestrianBuilder {
     const group = new THREE.Group()
     group.name = 'lowDetail'
 
-    const bodyMat = materials.body.clone()
-    const torso = new THREE.Mesh(this._lowGeo.torso, bodyMat)
-    torso.position.y = 1.0
+    const pelvis = new THREE.Group()
+    pelvis.position.y = 0.72
+    group.add(pelvis)
+
+    const torso = new THREE.Mesh(this._lowGeo.torso, materials.body.clone())
+    torso.position.y = 0.28
+    torso.name = 'torso'
     torso.castShadow = true
-    group.add(torso)
+    pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._lowGeo.neck, materials.skin)
-    neck.position.y = 1.38
+    neck.position.y = 0.62
+    neck.name = 'neck'
     neck.castShadow = true
-    group.add(neck)
+    torso.add(neck)
 
     const head = new THREE.Mesh(this._lowGeo.head, materials.skin)
-    head.position.y = 1.68
+    head.position.y = 0.24
+    head.name = 'head'
     head.castShadow = true
-    group.add(head)
+    neck.add(head)
 
     const hair = new THREE.Mesh(this._lowGeo.hair, materials.hair)
-    hair.position.y = 1.68
+    hair.position.y = 0.0
     hair.castShadow = true
-    group.add(hair)
+    head.add(hair)
 
-    const leftLeg = new THREE.Mesh(this._lowGeo.leg, materials.pants)
-    leftLeg.position.set(-0.13, 0.4, 0)
-    leftLeg.castShadow = true
-    group.add(leftLeg)
+    const leftLeg = new THREE.Group()
+    leftLeg.position.set(-0.13, 0, 0)
+    leftLeg.name = 'leftLeg'
+    pelvis.add(leftLeg)
 
-    const rightLeg = new THREE.Mesh(this._lowGeo.leg, materials.pants)
-    rightLeg.position.set(0.13, 0.4, 0)
-    rightLeg.castShadow = true
-    group.add(rightLeg)
+    const leftLegMesh = new THREE.Mesh(this._lowGeo.leg, materials.pants)
+    leftLegMesh.position.y = -0.28
+    leftLegMesh.castShadow = true
+    leftLeg.add(leftLegMesh)
 
     const leftFoot = new THREE.Mesh(this._lowGeo.foot, materials.shoe)
-    leftFoot.position.set(-0.13, 0.1, 0.04)
+    leftFoot.position.set(0, -0.58, 0.04)
+    leftFoot.name = 'leftFoot'
     leftFoot.castShadow = true
-    group.add(leftFoot)
+    leftLeg.add(leftFoot)
+
+    const rightLeg = new THREE.Group()
+    rightLeg.position.set(0.13, 0, 0)
+    rightLeg.name = 'rightLeg'
+    pelvis.add(rightLeg)
+
+    const rightLegMesh = new THREE.Mesh(this._lowGeo.leg, materials.pants)
+    rightLegMesh.position.y = -0.28
+    rightLegMesh.castShadow = true
+    rightLeg.add(rightLegMesh)
 
     const rightFoot = new THREE.Mesh(this._lowGeo.foot, materials.shoe)
-    rightFoot.position.set(0.13, 0.1, 0.04)
+    rightFoot.position.set(0, -0.58, 0.04)
+    rightFoot.name = 'rightFoot'
     rightFoot.castShadow = true
-    group.add(rightFoot)
+    rightLeg.add(rightFoot)
 
-    const leftArm = new THREE.Mesh(this._lowGeo.arm, materials.body)
-    leftArm.position.set(-0.32, 1.08, 0)
-    leftArm.castShadow = true
-    group.add(leftArm)
+    const leftArm = new THREE.Group()
+    leftArm.position.set(-0.24, 0.42, 0)
+    leftArm.name = 'leftArm'
+    torso.add(leftArm)
 
-    const rightArm = new THREE.Mesh(this._lowGeo.arm, materials.body)
-    rightArm.position.set(0.32, 1.08, 0)
-    rightArm.castShadow = true
-    group.add(rightArm)
+    const leftArmMesh = new THREE.Mesh(this._lowGeo.arm, materials.body)
+    leftArmMesh.position.y = -0.25
+    leftArmMesh.castShadow = true
+    leftArm.add(leftArmMesh)
 
     const leftHand = new THREE.Mesh(this._lowGeo.hand, materials.skin)
-    leftHand.position.set(-0.32, 0.8, 0)
+    leftHand.position.set(0, -0.5, 0)
+    leftHand.name = 'leftHand'
     leftHand.castShadow = true
-    group.add(leftHand)
+    leftArm.add(leftHand)
+
+    const rightArm = new THREE.Group()
+    rightArm.position.set(0.24, 0.42, 0)
+    rightArm.name = 'rightArm'
+    torso.add(rightArm)
+
+    const rightArmMesh = new THREE.Mesh(this._lowGeo.arm, materials.body)
+    rightArmMesh.position.y = -0.25
+    rightArmMesh.castShadow = true
+    rightArm.add(rightArmMesh)
 
     const rightHand = new THREE.Mesh(this._lowGeo.hand, materials.skin)
-    rightHand.position.set(0.32, 0.8, 0)
+    rightHand.position.set(0, -0.5, 0)
+    rightHand.name = 'rightHand'
     rightHand.castShadow = true
-    group.add(rightHand)
+    rightArm.add(rightHand)
 
     return group
   }
@@ -821,6 +917,8 @@ export class PedestrianBuilder {
 
         const legSwing = Math.sin(ped.walkPhase) * 0.5
         const armSwing = Math.sin(ped.walkPhase + Math.PI) * 0.4
+        const kneeBend = Math.max(0, Math.sin(ped.walkPhase)) * 0.3
+        const elbowBend = Math.max(0, Math.sin(ped.walkPhase + Math.PI)) * 0.25
         const bodyBob = Math.abs(Math.sin(ped.walkPhase)) * 0.03
         const hipSway = Math.sin(ped.walkPhase * 2) * 0.02
         const shoulderSway = Math.sin(ped.walkPhase * 2 + Math.PI) * 0.015
@@ -835,6 +933,12 @@ export class PedestrianBuilder {
           ped.rightLeg.rotation.x = -legSwing
           ped.rightLeg.position.z = -hipSway * 0.5
         }
+        if (ped.leftCalf) {
+          ped.leftCalf.rotation.x = -kneeBend * Math.sign(legSwing + 0.01)
+        }
+        if (ped.rightCalf) {
+          ped.rightCalf.rotation.x = kneeBend * Math.sign(-legSwing + 0.01)
+        }
         if (ped.leftArm) {
           ped.leftArm.rotation.x = armSwing
           ped.leftArm.position.z = shoulderSway
@@ -843,22 +947,28 @@ export class PedestrianBuilder {
           ped.rightArm.rotation.x = -armSwing
           ped.rightArm.position.z = -shoulderSway
         }
+        if (ped.leftForearm) {
+          ped.leftForearm.rotation.x = elbowBend + 0.1
+        }
+        if (ped.rightForearm) {
+          ped.rightForearm.rotation.x = elbowBend + 0.1
+        }
         if (ped.leftFoot) {
           const footLift = Math.max(0, Math.sin(ped.walkPhase + Math.PI / 2)) * 0.08
-          ped.leftFoot.position.y = 0.1 + footLift
+          ped.leftFoot.position.y = -0.25 + footLift
           ped.leftFoot.rotation.x = legSwing * 0.3
         }
         if (ped.rightFoot) {
           const footLift = Math.max(0, Math.sin(ped.walkPhase - Math.PI / 2)) * 0.08
-          ped.rightFoot.position.y = 0.1 + footLift
+          ped.rightFoot.position.y = -0.25 + footLift
           ped.rightFoot.rotation.x = -legSwing * 0.3
         }
         if (ped.torso) {
-          ped.torso.position.y = 1.0 + bodyBob
+          ped.torso.position.y = 0.28 + bodyBob
           ped.torso.rotation.z = hipSway * 0.3
         }
         if (ped.head) {
-          ped.head.position.y = 1.68 + headBob
+          ped.head.position.y = 0.08 + headBob
           ped.head.rotation.z = headTilt
         }
         if (ped.neck) {
@@ -872,7 +982,7 @@ export class PedestrianBuilder {
         const idleHeadTurn = Math.sin(elapsed * 0.8 + ped.bobPhase) * 0.05
 
         if (ped.torso) {
-          ped.torso.position.y = 1.0 + idleBreath
+          ped.torso.position.y = 0.28 + idleBreath
         }
         if (ped.head) {
           ped.head.rotation.y = idleHeadTurn
