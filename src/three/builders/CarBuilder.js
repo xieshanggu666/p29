@@ -13,6 +13,9 @@ const _sharedMats = {
   taillight: new THREE.MeshStandardMaterial({
     color: 0xff4444, emissive: 0xff0000, emissiveIntensity: 0.5, roughness: 0.2,
   }),
+  interior: new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.8 }),
+  seat: new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.8 }),
+  steering: new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6, metalness: 0.3 }),
 }
 
 export class CarBuilder {
@@ -91,6 +94,8 @@ export class CarBuilder {
     cabin.position.set(0, 0.95, 0)
     group.add(cabin)
 
+    this._addInterior(group, 0.55, 0.1)
+
     const wheelGroups = this._addWheels(group, 0.35, [
       [-0.7, 0.35, 1.05],
       [0.7, 0.35, 1.05],
@@ -113,6 +118,8 @@ export class CarBuilder {
     cabin.position.set(0, 1.23, 0)
     group.add(cabin)
 
+    this._addInterior(group, 0.7, 0.2)
+
     const wheelGroups = this._addWheels(group, 0.4, [
       [-0.8, 0.4, 1.15],
       [0.8, 0.4, 1.15],
@@ -134,6 +141,8 @@ export class CarBuilder {
     const cabin = new THREE.Mesh(this._carGeo.vanCabin, _sharedMats.glass)
     cabin.position.set(0, 1.55, 1.2)
     group.add(cabin)
+
+    this._addInterior(group, 0.9, 1.4)
 
     const wheelGroups = this._addWheels(group, 0.4, [
       [-0.85, 0.4, 1.35],
@@ -283,6 +292,12 @@ export class CarBuilder {
 
     const taillight = new THREE.BoxGeometry(0.25, 0.1, 0.08)
 
+    const seatBase = new THREE.BoxGeometry(0.35, 0.12, 0.4)
+    const seatBack = new THREE.BoxGeometry(0.35, 0.5, 0.1)
+    const steeringWheel = new THREE.TorusGeometry(0.12, 0.025, 8, 16)
+    const steeringColumn = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 6)
+    const dashboard = new THREE.BoxGeometry(1.1, 0.12, 0.25)
+
     return {
       sedanBody: sedanBodyLower,
       sedanCabin: sedanGlassCabin,
@@ -294,7 +309,50 @@ export class CarBuilder {
       wheelRim,
       headlight,
       taillight,
+      seatBase,
+      seatBack,
+      steeringWheel,
+      steeringColumn,
+      dashboard,
     }
+  }
+
+  _addInterior(group, seatY, frontZ, seatBackAngle = 0.15) {
+    const floor = new THREE.Mesh(this._carGeo.dashboard, _sharedMats.interior)
+    floor.scale.set(1, 0.5, 4)
+    floor.position.set(0, seatY - 0.1, 0)
+    group.add(floor)
+
+    const seatPositions = [
+      [-0.28, seatY, frontZ - 0.1],
+      [0.28, seatY, frontZ - 0.1],
+      [-0.28, seatY, frontZ - 0.7],
+      [0.28, seatY, frontZ - 0.7],
+    ]
+    for (const [sx, sy, sz] of seatPositions) {
+      const base = new THREE.Mesh(this._carGeo.seatBase, _sharedMats.seat)
+      base.position.set(sx, sy, sz)
+      group.add(base)
+
+      const back = new THREE.Mesh(this._carGeo.seatBack, _sharedMats.seat)
+      back.position.set(sx, sy + 0.3, sz - 0.2)
+      back.rotation.x = seatBackAngle
+      group.add(back)
+    }
+
+    const dash = new THREE.Mesh(this._carGeo.dashboard, _sharedMats.interior)
+    dash.position.set(0, seatY + 0.25, frontZ + 0.25)
+    group.add(dash)
+
+    const column = new THREE.Mesh(this._carGeo.steeringColumn, _sharedMats.steering)
+    column.position.set(-0.28, seatY + 0.2, frontZ + 0.05)
+    column.rotation.z = Math.PI / 2.5
+    group.add(column)
+
+    const wheel = new THREE.Mesh(this._carGeo.steeringWheel, _sharedMats.steering)
+    wheel.position.set(-0.28, seatY + 0.3, frontZ + 0.18)
+    wheel.rotation.y = Math.PI / 2
+    group.add(wheel)
   }
 
   updateAnimation(delta, elapsed) {

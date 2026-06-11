@@ -200,22 +200,22 @@ export class PedestrianBuilder {
     group.name = 'highDetail'
 
     const pelvis = new THREE.Group()
-    pelvis.position.y = 0.72
+    pelvis.position.y = 0.8
     pelvis.name = 'pelvis'
     group.add(pelvis)
 
     const torso = new THREE.Mesh(this._highGeo.torso, materials.body)
-    torso.position.y = 0.275
+    torso.position.y = 0.28
     torso.name = 'torso'
     pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._highGeo.neck, materials.skin)
-    neck.position.y = 0.45
+    neck.position.y = 0.32
     neck.name = 'neck'
     torso.add(neck)
 
     const headGroup = new THREE.Group()
-    headGroup.position.y = 0.5
+    headGroup.position.y = 0.05
     headGroup.name = 'headGroup'
     neck.add(headGroup)
 
@@ -352,25 +352,25 @@ export class PedestrianBuilder {
     group.name = 'mediumDetail'
 
     const pelvis = new THREE.Group()
-    pelvis.position.y = 0.72
+    pelvis.position.y = 0.8
     group.add(pelvis)
 
     const torso = new THREE.Mesh(this._mediumGeo.torso, materials.body)
-    torso.position.y = 0.275
+    torso.position.y = 0.28
     torso.name = 'torso'
     pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._mediumGeo.neck, materials.skin)
-    neck.position.y = 0.45
+    neck.position.y = 0.32
     torso.add(neck)
 
     const head = new THREE.Mesh(this._mediumGeo.head, materials.skin)
-    head.position.y = 0.15
+    head.position.y = 0.12
     head.name = 'head'
     neck.add(head)
 
     const hair = new THREE.Mesh(this._mediumGeo.hair, materials.hair)
-    hair.position.y = 0.05
+    hair.position.y = 0.02
     head.add(hair)
 
     const leftLeg = new THREE.Group()
@@ -429,25 +429,25 @@ export class PedestrianBuilder {
     group.name = 'lowDetail'
 
     const pelvis = new THREE.Group()
-    pelvis.position.y = 0.72
+    pelvis.position.y = 0.8
     group.add(pelvis)
 
     const torso = new THREE.Mesh(this._lowGeo.torso, materials.body)
-    torso.position.y = 0.275
+    torso.position.y = 0.28
     torso.name = 'torso'
     pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._lowGeo.neck, materials.skin)
-    neck.position.y = 0.45
+    neck.position.y = 0.32
     torso.add(neck)
 
     const head = new THREE.Mesh(this._lowGeo.head, materials.skin)
-    head.position.y = 0.15
+    head.position.y = 0.12
     head.name = 'head'
     neck.add(head)
 
     const hair = new THREE.Mesh(this._lowGeo.hair, materials.hair)
-    hair.position.y = 0.05
+    hair.position.y = 0.02
     head.add(hair)
 
     const leftLeg = new THREE.Group()
@@ -553,7 +553,7 @@ export class PedestrianBuilder {
       const tangent = ped.curve.getTangentAt(t)
 
       ped.group.position.copy(point)
-      ped.group.position.y = 0.15
+      ped.group.position.y = 0
 
       if (!ped.isIdle) {
         const speedFactor = ped.waitSpeedFactor !== undefined ? ped.waitSpeedFactor : 1
@@ -587,10 +587,10 @@ export class PedestrianBuilder {
           ped.rightForearm.rotation.x = Math.max(0, Math.sin(ped.walkPhase + 0.3)) * 0.6 * speedFactor + 0.15
         }
         if (ped.torso) {
-          ped.torso.position.y = 0.275 + bodyBob
+          ped.torso.position.y = 0.28 + bodyBob
         }
       } else {
-        if (ped.torso) ped.torso.position.y = 0.275 + Math.sin(elapsed * 1.2 + ped.bobPhase) * 0.008
+        if (ped.torso) ped.torso.position.y = 0.28 + Math.sin(elapsed * 1.2 + ped.bobPhase) * 0.008
       }
     }
   }

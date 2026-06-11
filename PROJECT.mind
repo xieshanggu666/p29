@@ -1630,3 +1630,92 @@ floorLabels（楼层标注）
 7. `src/three/builders/FloorBuilder.js` - 电梯轿厢缓存替代getObjectByName
 8. `src/three/builders/AnimalBuilder.js` - 鸟/鱼类材质共享（同群共享bodyMat/wingMat/finMat，跨群共享beakMat/bellyMat/eyeMat）
 9. `PROJECT.mind` - 更新优化记录
+
+---
+
+### 2026-06-12 修复模型渲染Bug + 数量精简
+
+#### Bug 1：人物模型头、颈、身体分离
+
+**根因分析**
+- 位置值严重错误导致层级脱节：
+  - `torso` 胶囊半高 = 0.29，但 `neck.position.y = 0.45` 远超躯干顶部
+  - `headGroup.position.y = 0.5` 在颈部空间中悬空，头身间隙达 ~0.7 单位
+  - `pelvis.position.y = 0.72` + `ped.group.position.y = 0.15` 使脚浮空
+  - torso bob 基准值（0.275）与新位置不匹配
+
+**修复方案**
+
+| 部位 | 修复前 position.y | 修复后 position.y | 说明 |
+|-----|------------------|------------------|------|
+| pelvis | 0.72 | 0.8 | 整体略抬高，匹配腿长 |
+| torso | 0.275 | 0.28 | 对齐胶囊中心 |
+| neck (torso空间) | 0.45 | 0.32 | 胶囊半高0.29 + 颈部底部余量0.03 |
+| headGroup (neck空间) | 0.5 | 0.05 | 紧贴颈部顶端（颈高0.08/2=0.04） |
+| head (mediumDetail) | 0.15 | 0.12 | 直接坐在颈部上 |
+| hair (medium/low) | 0.05 | 0.02 | 贴合头顶 |
+| ped.group.position.y | 0.15 | 0 | 脚接触地面 |
+| torso bob 基准 | 0.275 | 0.28 | 匹配新位置 |
+
+**修改文件**
+- `src/three/builders/PedestrianBuilder.js` - 修复高/中/低LOD三个层级的所有位置值、地面高度、bob基准值
+
+---
+
+#### Bug 2：车辆模型内饰消失
+
+**根因分析**
+- 第一轮优化中为减少 draw call 将内饰（座椅、方向盘、仪表板、地板）全部移除
+- 仅保留车身+玻璃+轮子+车灯，透过玻璃看见空车厢
+
+**修复方案（轻量恢复，每车+12 mesh）**
+
+新增共享材质（3种，全局仅1份）：
+- `interior` (仪表板/地板): 深灰 0x2a2a2a
+- `seat` (座椅/靠背): 棕 0x3a2a1a
+- `steering` (方向盘/转向柱): 黑 0x1a1a1a
+
+新增共享几何体（5种，全局仅1份）：
+- `seatBase`: BoxGeometry(0.35, 0.12, 0.4)
+- `seatBack`: BoxGeometry(0.35, 0.5, 0.1)
+- `steeringWheel`: TorusGeometry(0.12, 0.025, 8, 16)
+- `steeringColumn`: CylinderGeometry(0.02, 0.02, 0.2, 6)
+- `dashboard`: BoxGeometry(1.1, 0.12, 0.25)
+
+新增 `_addInterior(group, seatY, frontZ)` 方法，每辆车生成：
+| 部件 | 数量 |
+|-----|------|
+| 地板 | 1 |
+| 座椅底座 | 4 (前排×2 + 后排×2) |
+| 座椅靠背 | 4 |
+| 仪表板 | 1 |
+| 转向柱 | 1 |
+| 方向盘 | 1 |
+| **合计** | **+12 mesh/车** |
+
+Sedan/SUV/Van 分别传入不同的 seatY 和 frontZ 参数。
+
+**修改文件**
+- `src/three/builders/CarBuilder.js` - 添加3种共享材质、5种共享几何体、`_addInterior` 方法，三种车型调用恢复内饰
+
+---
+
+#### 性能保障：精简行人和车辆数量
+
+| 类型 | 修复前 | 修复后 | 减少幅度 |
+|-----|-------|-------|---------|
+| 行人 | 15 | 8 | -47% |
+| 车辆 | 8 | 5 | -37.5% |
+| 鸟群 | 3群(12只) | 保持不变 | - |
+| 鱼群 | 3群 | 保持不变 | - |
+
+**修改文件**
+- `src/config/districtData.js` - 移除重复路线的行人和车辆
+
+---
+
+#### 修改文件清单
+1. `src/three/builders/PedestrianBuilder.js` - 修复头/颈/身体分离的位置值
+2. `src/three/builders/CarBuilder.js` - 恢复内饰（座椅、方向盘、仪表板、地板）
+3. `src/config/districtData.js` - 精简行人15→8，车辆8→5
+4. `PROJECT.mind` - 记录Bug修复和优化措施
