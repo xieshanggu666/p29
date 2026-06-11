@@ -23,6 +23,15 @@
         <span class="icon">🔲</span>
         <span class="label">线框</span>
       </button>
+      <button
+        class="toolbar-btn"
+        :class="{ active: sceneStore.interiorView }"
+        @click="$emit('toggle-interior')"
+        title="内部视图（查看楼层结构）"
+      >
+        <span class="icon">🏢</span>
+        <span class="label">内部</span>
+      </button>
     </div>
 
     <div class="toolbar-group">
@@ -78,6 +87,7 @@ const emit = defineEmits([
   'reset-camera',
   'toggle-annotations',
   'toggle-wireframe',
+  'toggle-interior',
   'change-weather',
 ])
 

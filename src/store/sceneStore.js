@@ -11,6 +11,7 @@ export const useSceneStore = defineStore('scene', () => {
   const showAnnotations = ref(true)
   const showGrid = ref(true)
   const wireframeMode = ref(false)
+  const interiorView = ref(false)
   const fps = ref(60)
   const lodLevel = ref('high')
   const performanceStats = ref(null)
@@ -38,6 +39,8 @@ export const useSceneStore = defineStore('scene', () => {
   function toggleAnnotations() { showAnnotations.value = !showAnnotations.value }
   function toggleGrid() { showGrid.value = !showGrid.value }
   function toggleWireframe() { wireframeMode.value = !wireframeMode.value }
+  function toggleInteriorView() { interiorView.value = !interiorView.value }
+  function setInteriorView(val) { interiorView.value = val }
   function setFps(val) { fps.value = val }
   function setLodLevel(val) { lodLevel.value = val }
   function setPerformanceStats(val) { performanceStats.value = val }
@@ -56,11 +59,12 @@ export const useSceneStore = defineStore('scene', () => {
   return {
     isLoaded, isLoading, loadingProgress, currentScene,
     selectedObject, hoveredObject, showAnnotations, showGrid,
-    wireframeMode, fps, lodLevel, performanceStats, hasSelection,
+    wireframeMode, interiorView, fps, lodLevel, performanceStats, hasSelection,
     currentWeather, isWeatherTransitioning, weatherTransitionProgress, weatherOptions,
     setLoaded, setLoading, setLoadingProgress, setCurrentScene,
     setSelectedObject, setHoveredObject, toggleAnnotations, toggleGrid,
-    toggleWireframe, setFps, setLodLevel, setPerformanceStats, clearSelection,
+    toggleWireframe, toggleInteriorView, setInteriorView,
+    setFps, setLodLevel, setPerformanceStats, clearSelection,
     setCurrentWeather, setWeatherTransitioning, setWeatherTransitionProgress,
   }
 })

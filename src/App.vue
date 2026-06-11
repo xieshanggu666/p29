@@ -8,6 +8,7 @@
       @reset-camera="handleResetCamera"
       @toggle-annotations="handleToggleAnnotations"
       @toggle-wireframe="handleToggleWireframe"
+      @toggle-interior="handleToggleInterior"
       @change-weather="handleChangeWeather"
     />
 
@@ -59,6 +60,7 @@ const {
   deleteViewpoint,
   toggleAnnotations,
   toggleWireframe,
+  toggleInteriorView,
   resetCamera,
   changeWeather,
   dispose,
@@ -81,6 +83,7 @@ function handleDeleteViewpoint(name) { deleteViewpoint(name) }
 function handleResetCamera() { resetCamera() }
 function handleToggleAnnotations() { toggleAnnotations() }
 function handleToggleWireframe() { toggleWireframe() }
+function handleToggleInterior() { toggleInteriorView() }
 function handleChangeWeather(weather) { changeWeather(weather) }
 </script>
 

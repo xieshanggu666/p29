@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { FloorBuilder } from './FloorBuilder.js'
 
 export class BuildingBuilder {
   constructor(scene) {
@@ -8,6 +9,9 @@ export class BuildingBuilder {
     this.scene.add(this.buildingGroup)
     this.materials = this._createMaterials()
     this._roofLights = []
+    this.floorBuilder = new FloorBuilder(scene)
+    this._showInterior = false
+    this._buildingData = new Map()
   }
 
   _createMaterials() {
@@ -91,7 +95,10 @@ export class BuildingBuilder {
   createBuilding({ id, name, type, position, size, floors, info }) {
     const width = size[0]
     const depth = size[1]
-    const height = floors * 3
+
+    const floorConfig = this._getFloorHeightConfig(type)
+    const floorHeight = floorConfig.floorHeight
+    const height = floors * floorHeight
 
     const group = new THREE.Group()
     group.name = `building_${id}`
@@ -101,7 +108,9 @@ export class BuildingBuilder {
       buildingName: name,
       buildingType: type,
       buildingInfo: info,
-      floors
+      floors,
+      floorHeight,
+      totalHeight: height,
     }
 
     const bodyGeo = this._createBuildingGeometry(width, height, depth)
@@ -111,6 +120,7 @@ export class BuildingBuilder {
     body.receiveShadow = true
     body.position.y = 0
     body.userData = { interactive: true, buildingId: id, buildingName: name, buildingType: type, buildingInfo: info, floors }
+    body.name = 'buildingBody'
     group.add(body)
 
     this._addMergedWindows(group, width, height, depth, floors, type)
@@ -122,9 +132,39 @@ export class BuildingBuilder {
 
     this._addRoof(group, width, height, depth, type)
 
+    const floorResult = this.floorBuilder.buildFloors(
+      { id, type, size, floors },
+      group
+    )
+
+    const buildingData = {
+      id,
+      name,
+      type,
+      position,
+      size,
+      floors,
+      floorHeight,
+      totalHeight: height,
+      group,
+      bodyMesh: body,
+      floorResult,
+    }
+    this._buildingData.set(id, buildingData)
+
     group.position.set(position[0], 0, position[1])
     this.buildingGroup.add(group)
     return group
+  }
+
+  _getFloorHeightConfig(buildingType) {
+    const configs = {
+      commercial: { floorHeight: 3.6, slabThickness: 0.15 },
+      office: { floorHeight: 3.5, slabThickness: 0.12 },
+      retail: { floorHeight: 4.0, slabThickness: 0.18 },
+      residential: { floorHeight: 3.0, slabThickness: 0.12 },
+    }
+    return configs[buildingType] || configs.commercial
   }
 
   _createBuildingGeometry(width, height, depth) {
@@ -239,6 +279,7 @@ export class BuildingBuilder {
     const glass = new THREE.Mesh(glassGeo, this.materials.glass)
     glass.position.y = height / 2
     glass.userData = { interactive: true, buildingId: group.userData.buildingId }
+    glass.name = 'glassFacade'
     group.add(glass)
   }
 
@@ -358,14 +399,84 @@ export class BuildingBuilder {
     }))
   }
 
-  updateAnimation(elapsed) {
+  updateAnimation(delta, elapsed) {
     for (const light of this._roofLights) {
       light.material.emissiveIntensity = 0.3 + Math.sin(elapsed * 2) * 0.3
     }
+    this.floorBuilder.updateAnimation(delta, elapsed)
+  }
+
+  toggleInteriorView() {
+    this._showInterior = !this._showInterior
+    this.setInteriorView(this._showInterior)
+    return this._showInterior
+  }
+
+  setInteriorView(show) {
+    this._showInterior = show
+    for (const [, data] of this._buildingData) {
+      this._setBuildingInteriorVisible(data, show)
+    }
+  }
+
+  _setBuildingInteriorVisible(buildingData, show) {
+    const { group, bodyMesh } = buildingData
+
+    if (show) {
+      if (bodyMesh.material) {
+        bodyMesh.material.transparent = true
+        bodyMesh.material.opacity = 0.12
+        bodyMesh.material.depthWrite = false
+      }
+
+      const glassFacade = group.getObjectByName ? group.getObjectByName('glassFacade') : null
+      if (glassFacade) {
+        glassFacade.visible = false
+      }
+    } else {
+      if (bodyMesh.material) {
+        bodyMesh.material.transparent = false
+        bodyMesh.material.opacity = 1
+        bodyMesh.material.depthWrite = true
+      }
+
+      const glassFacade = group.getObjectByName ? group.getObjectByName('glassFacade') : null
+      if (glassFacade) {
+        glassFacade.visible = true
+      }
+    }
+
+    this.floorBuilder.setFloorsVisible(buildingData.id, show)
+  }
+
+  setBuildingInteriorView(buildingId, show) {
+    const buildingData = this._buildingData.get(buildingId)
+    if (buildingData) {
+      this._setBuildingInteriorVisible(buildingData, show)
+    }
+  }
+
+  getFloorBuilder() {
+    return this.floorBuilder
+  }
+
+  getBuildingFloorInfo(buildingId) {
+    return this.floorBuilder.getFloorInfo(buildingId)
+  }
+
+  getAllBuildingFloorInfo() {
+    const result = []
+    for (const [id] of this._buildingData) {
+      const info = this.floorBuilder.getFloorInfo(id)
+      if (info) result.push(info)
+    }
+    return result
   }
 
   dispose() {
     this._roofLights = []
+    this.floorBuilder.dispose()
+    this._buildingData.clear()
     this.buildingGroup.traverse((child) => {
       if (child.geometry) child.geometry.dispose()
       if (child.material) {

@@ -408,36 +408,63 @@ export const annotationData = [
   {
     id: 'ann001',
     targetId: 'b001',
-    position: { x: 0, y: 36, z: 0 },
+    position: { x: 0, y: 38, z: 0 },
     title: '万达商业广场',
-    content: '区域核心商业综合体，日均客流4.5万人次',
+    content: '区域核心商业综合体，12层，层高3.6m，日均客流4.5万人次',
     color: 0xff6644,
   },
   {
     id: 'ann002',
     targetId: 'b002',
-    position: { x: 14, y: 75, z: -8 },
+    position: { x: 14, y: 78, z: -8 },
     title: '金融中心大厦',
-    content: '甲级写字楼，入驻率88%，平均租金45元/㎡/天',
+    content: '甲级写字楼，25层，层高3.5m，入驻率88%',
     color: 0x4488ff,
   },
   {
     id: 'ann003',
     targetId: 'b003',
-    position: { x: -12, y: 18, z: 8 },
+    position: { x: -12, y: 20, z: 8 },
     title: '星光天地购物中心',
-    content: '精品零售为主，入驻率95%，日均客流3.2万人次',
+    content: '精品零售为主，6层，层高4.0m，入驻率95%',
     color: 0xffaa22,
   },
   {
     id: 'ann004',
     targetId: 'b007',
-    position: { x: 4, y: 9, z: 12 },
+    position: { x: 4, y: 10, z: 12 },
     title: '美食商业街',
-    content: '特色餐饮聚集地，入驻率98%，日均客流2.8万人次',
+    content: '特色餐饮聚集地，3层，层高4.0m，入驻率98%',
     color: 0xff4488,
   },
 ]
+
+export const floorTypeConfig = {
+  commercial: {
+    floorHeight: 3.6,
+    slabThickness: 0.15,
+    description: '商业建筑：层高3.6m，楼板厚0.15m',
+    typicalUse: '购物中心、百货、商业综合体',
+  },
+  office: {
+    floorHeight: 3.5,
+    slabThickness: 0.12,
+    description: '办公建筑：层高3.5m，楼板厚0.12m',
+    typicalUse: '写字楼、商务中心、研发楼',
+  },
+  retail: {
+    floorHeight: 4.0,
+    slabThickness: 0.18,
+    description: '零售建筑：层高4.0m，楼板厚0.18m',
+    typicalUse: '专卖店、商业街、零售卖场',
+  },
+  residential: {
+    floorHeight: 3.0,
+    slabThickness: 0.12,
+    description: '住宅建筑：层高3.0m，楼板厚0.12m',
+    typicalUse: '住宅楼、公寓、酒店式公寓',
+  },
+}
 
 export const scenePresets = {
   overview: {

@@ -73,12 +73,36 @@ export class DistrictModelBuilder {
   }
 
   updateAnimation(delta, elapsed) {
-    this.buildingBuilder.updateAnimation(elapsed)
+    this.buildingBuilder.updateAnimation(delta, elapsed)
     this.greeneryBuilder.updateAnimation(elapsed)
     this.stallBuilder.updateAnimation(elapsed)
     this.vehicleBuilder.updateAnimation(delta, elapsed)
     this.landscapeBuilder.updateAnimation(elapsed)
     this.animalBuilder.updateAnimation(delta, elapsed)
+  }
+
+  getFloorBuilder() {
+    return this.buildingBuilder.getFloorBuilder()
+  }
+
+  toggleInteriorView() {
+    return this.buildingBuilder.toggleInteriorView()
+  }
+
+  setInteriorView(show) {
+    this.buildingBuilder.setInteriorView(show)
+  }
+
+  setBuildingInteriorView(buildingId, show) {
+    this.buildingBuilder.setBuildingInteriorView(buildingId, show)
+  }
+
+  getBuildingFloorInfo(buildingId) {
+    return this.buildingBuilder.getBuildingFloorInfo(buildingId)
+  }
+
+  getAllBuildingFloorInfo() {
+    return this.buildingBuilder.getAllBuildingFloorInfo()
   }
 
   dispose() {

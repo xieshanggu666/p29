@@ -32,6 +32,13 @@ export function useThreeScene() {
     changeWeather,
   } = useSceneControls(sceneManager, viewpointManager, annotationManager, weatherManager)
 
+  function toggleInteriorView() {
+    sceneStore.toggleInteriorView()
+    if (modelBuilder.value) {
+      modelBuilder.value.setInteriorView(sceneStore.interiorView)
+    }
+  }
+
   const {
     startPerfMonitor,
     stopPerfMonitor,
@@ -77,6 +84,7 @@ export function useThreeScene() {
     deleteViewpoint,
     toggleAnnotations,
     toggleWireframe,
+    toggleInteriorView,
     resetCamera,
     changeWeather,
     runPerformanceBenchmark,
