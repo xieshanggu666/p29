@@ -1,5 +1,20 @@
 import * as THREE from 'three'
 
+const _sharedMats = {
+  tire: new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 }),
+  rim: new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.2, metalness: 0.9 }),
+  glass: new THREE.MeshStandardMaterial({
+    color: 0x88bbdd, roughness: 0.05, metalness: 0.1,
+    transparent: true, opacity: 0.4, side: THREE.DoubleSide,
+  }),
+  headlight: new THREE.MeshStandardMaterial({
+    color: 0xffffee, emissive: 0xffffaa, emissiveIntensity: 0.8, roughness: 0.1,
+  }),
+  taillight: new THREE.MeshStandardMaterial({
+    color: 0xff4444, emissive: 0xff0000, emissiveIntensity: 0.5, roughness: 0.2,
+  }),
+}
+
 export class CarBuilder {
   constructor(parentGroup) {
     this.parentGroup = parentGroup
@@ -28,92 +43,27 @@ export class CarBuilder {
       carType: type,
     }
 
-    const bodyMat = new THREE.MeshPhysicalMaterial({
+    const bodyMat = new THREE.MeshStandardMaterial({
       color,
       roughness: 0.2,
-      metalness: 0.8,
-      clearcoat: 0.5,
-      clearcoatRoughness: 0.15,
-    })
-    const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0x88bbdd,
-      roughness: 0.05,
-      metalness: 0.0,
-      transmission: 0.6,
-      transparent: true,
-      opacity: 0.5,
-      reflectivity: 0.8,
-      ior: 1.5,
-      thickness: 0.01,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    })
-    const tireMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1a1a,
-      roughness: 0.9,
-      metalness: 0.0,
-    })
-    const rimMat = new THREE.MeshStandardMaterial({
-      color: 0xcccccc,
-      roughness: 0.2,
-      metalness: 0.9,
-    })
-    const hubMat = new THREE.MeshStandardMaterial({
-      color: 0x888888,
-      roughness: 0.3,
-      metalness: 0.7,
-    })
-    const lightMat = new THREE.MeshStandardMaterial({
-      color: 0xffffee,
-      emissive: 0xffffaa,
-      emissiveIntensity: 0.8,
-      roughness: 0.1,
-      metalness: 0.1,
-    })
-    const tailLightMat = new THREE.MeshStandardMaterial({
-      color: 0xff4444,
-      emissive: 0xff0000,
-      emissiveIntensity: 0.5,
-      roughness: 0.2,
-      metalness: 0.1,
-    })
-    const bumperMat = new THREE.MeshStandardMaterial({
-      color: 0x222222,
-      roughness: 0.6,
-      metalness: 0.1,
-    })
-    const mirrorMat = new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.25,
-      metalness: 0.7,
-      clearcoat: 0.4,
-      clearcoatRoughness: 0.2,
-    })
-    const handleMat = new THREE.MeshStandardMaterial({
-      color: 0xdddddd,
-      roughness: 0.25,
       metalness: 0.8,
     })
 
     let buildResult
     if (type === 'sedan') {
-      buildResult = this._buildSedan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat)
+      buildResult = this._buildSedan(group, bodyMat)
     } else if (type === 'suv') {
-      buildResult = this._buildSuv(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat)
+      buildResult = this._buildSuv(group, bodyMat)
     } else if (type === 'van') {
-      buildResult = this._buildVan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat)
+      buildResult = this._buildVan(group, bodyMat)
     }
 
-    const { wheelGroups, interiorData } = buildResult || {}
+    const { wheelGroups } = buildResult || {}
 
     const curve = new THREE.CatmullRomCurve3(
       path.map(p => new THREE.Vector3(p[0], 0, p[1])),
       closed
     )
-
-    group.userData.interiorConfig = interiorData ? interiorData.config : null
-    group.userData.interiorMeshes = interiorData ? interiorData.meshes : null
-    group.userData.hasInterior = !!interiorData
 
     const carData = {
       group,
@@ -123,7 +73,6 @@ export class CarBuilder {
       direction: 1,
       closed,
       wheelGroups: wheelGroups || [],
-      interior: interiorData || null,
       wheelRotation: 0,
     }
 
@@ -132,382 +81,73 @@ export class CarBuilder {
     return group
   }
 
-  _buildSedan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat) {
+  _buildSedan(group, bodyMat) {
     const body = new THREE.Mesh(this._carGeo.sedanBody, bodyMat)
     body.position.y = 0.5
     body.castShadow = true
-    body.renderOrder = 1
     group.add(body)
 
-    const cabin = new THREE.Mesh(this._carGeo.sedanCabin, glassMat)
+    const cabin = new THREE.Mesh(this._carGeo.sedanCabin, _sharedMats.glass)
     cabin.position.set(0, 0.95, 0)
-    cabin.renderOrder = 3
     group.add(cabin)
 
-    this._addSedanWindowFrames(group, bodyMat)
-
-    const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.35, [
+    const wheelGroups = this._addWheels(group, 0.35, [
       [-0.7, 0.35, 1.05],
       [0.7, 0.35, 1.05],
       [-0.7, 0.35, -1.05],
       [0.7, 0.35, -1.05],
     ])
 
-    this._addLights(group, lightMat, tailLightMat, 0.55, 1.5)
-    this._addBumpers(group, bumperMat, 0.2, 1.55)
-    this._addSideMirrors(group, mirrorMat, 0.9, 0.85)
-    this._addDoorHandles(group, handleMat, 0.75, 0.6, 0.5)
+    this._addLights(group, 0.55, 1.5)
 
-    const interiorData = this._addInterior(group, 0.55, 0.6, 0.4, 2)
-
-    this._addUnderbody(group, 0.18, 1.4, 2.8)
-    this._addWheelWells(group, 0.25, 1.05, -1.05, 0.08)
-
-    return { wheelGroups, interiorData }
+    return { wheelGroups }
   }
 
-  _addSedanWindowFrames(group, bodyMat) {
-    const frameMat = bodyMat
-    const baseY = 0.95
-    const cabinHalfLen = 1.4
-
-    const aLeft = new THREE.Mesh(this._carGeo.pillarA, frameMat)
-    aLeft.position.set(-0.45, baseY + 0.2, cabinHalfLen - 0.05)
-    aLeft.rotation.z = -0.35
-    aLeft.castShadow = true
-    group.add(aLeft)
-
-    const aRight = new THREE.Mesh(this._carGeo.pillarA, frameMat)
-    aRight.position.set(0.45, baseY + 0.2, cabinHalfLen - 0.05)
-    aRight.rotation.z = 0.35
-    aRight.castShadow = true
-    group.add(aRight)
-
-    const bLeft = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    bLeft.position.set(-0.49, baseY + 0.22, -0.05)
-    bLeft.castShadow = true
-    group.add(bLeft)
-
-    const bRight = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    bRight.position.set(0.49, baseY + 0.22, -0.05)
-    bRight.castShadow = true
-    group.add(bRight)
-
-    const cLeft = new THREE.Mesh(this._carGeo.pillarC, frameMat)
-    cLeft.position.set(-0.45, baseY + 0.2, -(cabinHalfLen - 0.05))
-    cLeft.rotation.z = 0.35
-    cLeft.castShadow = true
-    group.add(cLeft)
-
-    const cRight = new THREE.Mesh(this._carGeo.pillarC, frameMat)
-    cRight.position.set(0.45, baseY + 0.2, -(cabinHalfLen - 0.05))
-    cRight.rotation.z = -0.35
-    cRight.castShadow = true
-    group.add(cRight)
-
-    const railLeft = new THREE.Mesh(this._carGeo.roofRail, frameMat)
-    railLeft.position.set(-0.42, baseY + 0.45, 0)
-    railLeft.castShadow = true
-    group.add(railLeft)
-
-    const railRight = new THREE.Mesh(this._carGeo.roofRail, frameMat)
-    railRight.position.set(0.42, baseY + 0.45, 0)
-    railRight.castShadow = true
-    group.add(railRight)
-
-    const sillLeft = new THREE.Mesh(this._carGeo.sill, frameMat)
-    sillLeft.position.set(-0.49, baseY + 0.02, 0)
-    sillLeft.castShadow = true
-    group.add(sillLeft)
-
-    const sillRight = new THREE.Mesh(this._carGeo.sill, frameMat)
-    sillRight.position.set(0.49, baseY + 0.02, 0)
-    sillRight.castShadow = true
-    group.add(sillRight)
-
-    const headerFront = new THREE.Mesh(this._carGeo.header, frameMat)
-    headerFront.position.set(0, baseY + 0.4, cabinHalfLen - 0.05)
-    headerFront.castShadow = true
-    group.add(headerFront)
-
-    const headerRear = new THREE.Mesh(this._carGeo.header, frameMat)
-    headerRear.position.set(0, baseY + 0.4, -(cabinHalfLen - 0.05))
-    headerRear.castShadow = true
-    group.add(headerRear)
-
-    const headerMiddle = new THREE.Mesh(this._carGeo.header, frameMat)
-    headerMiddle.position.set(0, baseY + 0.43, -0.05)
-    headerMiddle.castShadow = true
-    group.add(headerMiddle)
-
-    const roof = new THREE.Mesh(this._carGeo.roofPanel, bodyMat)
-    roof.position.set(0, baseY + 0.49, 0)
-    roof.castShadow = true
-    roof.renderOrder = 1
-    group.add(roof)
-  }
-
-  _buildSuv(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat) {
+  _buildSuv(group, bodyMat) {
     const body = new THREE.Mesh(this._carGeo.suvBody, bodyMat)
     body.position.y = 0.65
     body.castShadow = true
-    body.renderOrder = 1
     group.add(body)
 
-    const cabin = new THREE.Mesh(this._carGeo.suvCabin, glassMat)
+    const cabin = new THREE.Mesh(this._carGeo.suvCabin, _sharedMats.glass)
     cabin.position.set(0, 1.23, 0)
-    cabin.renderOrder = 3
     group.add(cabin)
 
-    this._addSuvWindowFrames(group, bodyMat)
-
-    const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.4, [
+    const wheelGroups = this._addWheels(group, 0.4, [
       [-0.8, 0.4, 1.15],
       [0.8, 0.4, 1.15],
       [-0.8, 0.4, -1.15],
       [0.8, 0.4, -1.15],
     ])
 
-    this._addLights(group, lightMat, tailLightMat, 0.7, 1.7)
-    this._addBumpers(group, bumperMat, 0.25, 1.75)
-    this._addSideMirrors(group, mirrorMat, 1.05, 1.0)
-    this._addDoorHandles(group, handleMat, 0.9, 0.75, 0.6)
+    this._addLights(group, 0.7, 1.7)
 
-    const interiorData = this._addInterior(group, 0.65, 0.7, 0.4, 3)
-
-    this._addUnderbody(group, 0.22, 1.5, 3.2)
-    this._addWheelWells(group, 0.3, 1.15, -1.15, 0.08)
-
-    return { wheelGroups, interiorData }
+    return { wheelGroups }
   }
 
-  _addSuvWindowFrames(group, bodyMat) {
-    const frameMat = bodyMat
-    const baseY = 1.23
-    const cabinHalfLen = 1.65
-
-    const aLeft = new THREE.Mesh(this._carGeo.pillarA, frameMat)
-    aLeft.position.set(-0.54, baseY + 0.28, cabinHalfLen - 0.05)
-    aLeft.scale.y = 1.15
-    aLeft.rotation.z = -0.25
-    aLeft.castShadow = true
-    group.add(aLeft)
-
-    const aRight = new THREE.Mesh(this._carGeo.pillarA, frameMat)
-    aRight.position.set(0.54, baseY + 0.28, cabinHalfLen - 0.05)
-    aRight.scale.y = 1.15
-    aRight.rotation.z = 0.25
-    aRight.castShadow = true
-    group.add(aRight)
-
-    const bLeft = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    bLeft.position.set(-0.58, baseY + 0.32, 0.4)
-    bLeft.scale.y = 1.2
-    bLeft.castShadow = true
-    group.add(bLeft)
-
-    const bRight = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    bRight.position.set(0.58, baseY + 0.32, 0.4)
-    bRight.scale.y = 1.2
-    bRight.castShadow = true
-    group.add(bRight)
-
-    const b2Left = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    b2Left.position.set(-0.58, baseY + 0.32, -0.6)
-    b2Left.scale.y = 1.2
-    b2Left.castShadow = true
-    group.add(b2Left)
-
-    const b2Right = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    b2Right.position.set(0.58, baseY + 0.32, -0.6)
-    b2Right.scale.y = 1.2
-    b2Right.castShadow = true
-    group.add(b2Right)
-
-    const cLeft = new THREE.Mesh(this._carGeo.pillarC, frameMat)
-    cLeft.position.set(-0.54, baseY + 0.28, -(cabinHalfLen - 0.05))
-    cLeft.scale.y = 1.15
-    cLeft.rotation.z = 0.25
-    cLeft.castShadow = true
-    group.add(cLeft)
-
-    const cRight = new THREE.Mesh(this._carGeo.pillarC, frameMat)
-    cRight.position.set(0.54, baseY + 0.28, -(cabinHalfLen - 0.05))
-    cRight.scale.y = 1.15
-    cRight.rotation.z = -0.25
-    cRight.castShadow = true
-    group.add(cRight)
-
-    const railLeft = new THREE.Mesh(this._carGeo.roofRailLong, frameMat)
-    railLeft.position.set(-0.52, baseY + 0.62, 0)
-    railLeft.castShadow = true
-    group.add(railLeft)
-
-    const railRight = new THREE.Mesh(this._carGeo.roofRailLong, frameMat)
-    railRight.position.set(0.52, baseY + 0.62, 0)
-    railRight.castShadow = true
-    group.add(railRight)
-
-    const sillLeft = new THREE.Mesh(this._carGeo.sillLong, frameMat)
-    sillLeft.position.set(-0.58, baseY + 0.02, 0)
-    sillLeft.castShadow = true
-    group.add(sillLeft)
-
-    const sillRight = new THREE.Mesh(this._carGeo.sillLong, frameMat)
-    sillRight.position.set(0.58, baseY + 0.02, 0)
-    sillRight.castShadow = true
-    group.add(sillRight)
-
-    const headerFront = new THREE.Mesh(this._carGeo.headerWide, frameMat)
-    headerFront.position.set(0, baseY + 0.55, cabinHalfLen - 0.05)
-    headerFront.castShadow = true
-    group.add(headerFront)
-
-    const headerRear = new THREE.Mesh(this._carGeo.headerWide, frameMat)
-    headerRear.position.set(0, baseY + 0.55, -(cabinHalfLen - 0.05))
-    headerRear.castShadow = true
-    group.add(headerRear)
-
-    const roof = new THREE.Mesh(this._carGeo.roofPanelWide, bodyMat)
-    roof.position.set(0, baseY + 0.64, 0)
-    roof.castShadow = true
-    roof.renderOrder = 1
-    group.add(roof)
-  }
-
-  _buildVan(group, bodyMat, glassMat, tireMat, rimMat, hubMat, lightMat, tailLightMat, bumperMat, mirrorMat, handleMat) {
+  _buildVan(group, bodyMat) {
     const body = new THREE.Mesh(this._carGeo.vanBody, bodyMat)
     body.position.y = 0.85
     body.castShadow = true
-    body.renderOrder = 1
     group.add(body)
 
-    const cabin = new THREE.Mesh(this._carGeo.vanCabin, glassMat)
+    const cabin = new THREE.Mesh(this._carGeo.vanCabin, _sharedMats.glass)
     cabin.position.set(0, 1.55, 1.2)
-    cabin.renderOrder = 3
     group.add(cabin)
 
-    this._addVanWindowFrames(group, bodyMat, glassMat)
-
-    const wheelGroups = this._addWheels(group, tireMat, rimMat, hubMat, 0.4, [
+    const wheelGroups = this._addWheels(group, 0.4, [
       [-0.85, 0.4, 1.35],
       [0.85, 0.4, 1.35],
       [-0.85, 0.4, -1.35],
       [0.85, 0.4, -1.35],
     ])
 
-    this._addLights(group, lightMat, tailLightMat, 0.9, 1.9)
-    this._addBumpers(group, bumperMat, 0.3, 1.95)
-    this._addSideMirrors(group, mirrorMat, 1.25, 1.3)
-    this._addDoorHandles(group, handleMat, 1.0, 0.9, 0.8)
+    this._addLights(group, 0.9, 1.9)
 
-    const interiorData = this._addInterior(group, 0.85, 0.95, 0.4, 2)
-
-    this._addUnderbody(group, 0.28, 1.6, 3.6)
-    this._addWheelWells(group, 0.3, 1.35, -1.35, 0.08)
-
-    return { wheelGroups, interiorData }
+    return { wheelGroups }
   }
 
-  _addVanWindowFrames(group, bodyMat, glassMat) {
-    const frameMat = bodyMat
-    const baseY = 1.55
-
-    const aLeft = new THREE.Mesh(this._carGeo.pillarA, frameMat)
-    aLeft.position.set(-0.61, baseY + 0.3, 1.8)
-    aLeft.scale.y = 1.2
-    aLeft.rotation.z = -0.2
-    aLeft.castShadow = true
-    group.add(aLeft)
-
-    const aRight = new THREE.Mesh(this._carGeo.pillarA, frameMat)
-    aRight.position.set(0.61, baseY + 0.3, 1.8)
-    aRight.scale.y = 1.2
-    aRight.rotation.z = 0.2
-    aRight.castShadow = true
-    group.add(aRight)
-
-    const bLeft = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    bLeft.position.set(-0.64, baseY + 0.35, 1.15)
-    bLeft.scale.y = 1.3
-    bLeft.castShadow = true
-    group.add(bLeft)
-
-    const bRight = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    bRight.position.set(0.64, baseY + 0.35, 1.15)
-    bRight.scale.y = 1.3
-    bRight.castShadow = true
-    group.add(bRight)
-
-    const cargoPillarLeft = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    cargoPillarLeft.position.set(-0.64, baseY + 0.35, -0.5)
-    cargoPillarLeft.scale.y = 1.3
-    cargoPillarLeft.castShadow = true
-    group.add(cargoPillarLeft)
-
-    const cargoPillarRight = new THREE.Mesh(this._carGeo.pillarB, frameMat)
-    cargoPillarRight.position.set(0.64, baseY + 0.35, -0.5)
-    cargoPillarRight.scale.y = 1.3
-    cargoPillarRight.castShadow = true
-    group.add(cargoPillarRight)
-
-    const railLeft = new THREE.Mesh(this._carGeo.roofRailLong, frameMat)
-    railLeft.position.set(-0.6, baseY + 0.68, 0)
-    railLeft.castShadow = true
-    group.add(railLeft)
-
-    const railRight = new THREE.Mesh(this._carGeo.roofRailLong, frameMat)
-    railRight.position.set(0.6, baseY + 0.68, 0)
-    railRight.castShadow = true
-    group.add(railRight)
-
-    const sillLeft = new THREE.Mesh(this._carGeo.sillLong, frameMat)
-    sillLeft.position.set(-0.64, baseY + 0.02, 0)
-    sillLeft.castShadow = true
-    group.add(sillLeft)
-
-    const sillRight = new THREE.Mesh(this._carGeo.sillLong, frameMat)
-    sillRight.position.set(0.64, baseY + 0.02, 0)
-    sillRight.castShadow = true
-    group.add(sillRight)
-
-    const headerFront = new THREE.Mesh(this._carGeo.headerWide, frameMat)
-    headerFront.position.set(0, baseY + 0.6, 1.8)
-    headerFront.castShadow = true
-    group.add(headerFront)
-
-    const headerRear = new THREE.Mesh(this._carGeo.headerWide, frameMat)
-    headerRear.position.set(0, baseY + 0.6, -1.85)
-    headerRear.castShadow = true
-    group.add(headerRear)
-
-    const roof = new THREE.Mesh(this._carGeo.roofPanelWide, bodyMat)
-    roof.position.set(0, baseY + 0.69, 0)
-    roof.castShadow = true
-    roof.renderOrder = 1
-    group.add(roof)
-
-    const cargoGlassL = new THREE.Mesh(this._carGeo.vanSideGlassL, glassMat)
-    cargoGlassL.position.set(-0.64, baseY + 0.35, -0.6)
-    cargoGlassL.renderOrder = 3
-    group.add(cargoGlassL)
-
-    const cargoGlassR = new THREE.Mesh(this._carGeo.vanSideGlassL, glassMat)
-    cargoGlassR.position.set(0.64, baseY + 0.35, -0.6)
-    cargoGlassR.renderOrder = 3
-    group.add(cargoGlassR)
-
-    const cargoGlassRear = new THREE.Mesh(this._carGeo.vanRearGlass, glassMat)
-    cargoGlassRear.position.set(0, baseY + 0.35, -1.96)
-    cargoGlassRear.renderOrder = 3
-    group.add(cargoGlassRear)
-  }
-
-  _addWheels(group, tireMat, rimMat, hubMat, radius, positions) {
-    const tireScale = radius
-    const halfTire = 0.11
-    const halfRim = 0.12
-    const halfHub = 0.13
+  _addWheels(group, radius, positions) {
     const wheelGroups = []
     for (const pos of positions) {
       const wheelGroup = new THREE.Group()
@@ -517,53 +157,13 @@ export class CarBuilder {
       innerGroup.rotation.z = Math.PI / 2
       wheelGroup.add(innerGroup)
 
-      const tire = new THREE.Mesh(this._carGeo.wheelTire, tireMat)
-      tire.scale.set(tireScale, 1, tireScale)
-      tire.castShadow = true
+      const tire = new THREE.Mesh(this._carGeo.wheelTire, _sharedMats.tire)
+      tire.scale.set(radius, 1, radius)
       innerGroup.add(tire)
 
-      const tireSideL = new THREE.Mesh(this._carGeo.wheelTireSide, tireMat)
-      tireSideL.scale.set(tireScale, tireScale, 1)
-      tireSideL.position.y = halfTire
-      tireSideL.rotation.x = -Math.PI / 2
-      innerGroup.add(tireSideL)
-
-      const tireSideR = new THREE.Mesh(this._carGeo.wheelTireSide, tireMat)
-      tireSideR.scale.set(tireScale, tireScale, 1)
-      tireSideR.position.y = -halfTire
-      tireSideR.rotation.x = Math.PI / 2
-      innerGroup.add(tireSideR)
-
-      const rim = new THREE.Mesh(this._carGeo.wheelRim, rimMat)
-      rim.scale.set(tireScale * 0.55, 1, tireScale * 0.55)
+      const rim = new THREE.Mesh(this._carGeo.wheelRim, _sharedMats.rim)
+      rim.scale.set(radius * 0.55, 1, radius * 0.55)
       innerGroup.add(rim)
-
-      const rimSideL = new THREE.Mesh(this._carGeo.wheelRimSide, rimMat)
-      rimSideL.scale.set(tireScale * 0.55, tireScale * 0.55, 1)
-      rimSideL.position.y = halfRim
-      rimSideL.rotation.x = -Math.PI / 2
-      innerGroup.add(rimSideL)
-
-      const rimSideR = new THREE.Mesh(this._carGeo.wheelRimSide, rimMat)
-      rimSideR.scale.set(tireScale * 0.55, tireScale * 0.55, 1)
-      rimSideR.position.y = -halfRim
-      rimSideR.rotation.x = Math.PI / 2
-      innerGroup.add(rimSideR)
-
-      const hubCap = new THREE.Mesh(this._carGeo.wheelHubCap, hubMat)
-      hubCap.scale.set(tireScale * 0.2, 1, tireScale * 0.2)
-      innerGroup.add(hubCap)
-
-      const hubSideL = new THREE.Mesh(this._carGeo.wheelHubCapSide, hubMat)
-      hubSideL.scale.set(tireScale * 0.2, tireScale * 0.2, 1)
-      hubSideL.position.y = halfHub
-      hubSideL.rotation.x = -Math.PI / 2
-      innerGroup.add(hubSideL)
-
-      const hubSideR = new THREE.Mesh(this._carGeo.wheelHubCapSide, hubMat)
-      hubSideR.position.y = -halfHub
-      hubSideR.rotation.x = Math.PI / 2
-      innerGroup.add(hubSideR)
 
       wheelGroup.position.set(pos[0], pos[1], pos[2])
       wheelGroup.userData.radius = radius
@@ -573,229 +173,24 @@ export class CarBuilder {
     return wheelGroups
   }
 
-  _addLights(group, lightMat, tailLightMat, yPos, halfLength) {
-    const frontLeft = new THREE.Mesh(this._carGeo.headlight, lightMat)
+  _addLights(group, yPos, halfLength) {
+    const frontLeft = new THREE.Mesh(this._carGeo.headlight, _sharedMats.headlight)
     frontLeft.position.set(-0.5, yPos, halfLength)
     frontLeft.rotation.x = -Math.PI / 2
     group.add(frontLeft)
 
-    const frontRight = new THREE.Mesh(this._carGeo.headlight, lightMat)
+    const frontRight = new THREE.Mesh(this._carGeo.headlight, _sharedMats.headlight)
     frontRight.position.set(0.5, yPos, halfLength)
     frontRight.rotation.x = -Math.PI / 2
     group.add(frontRight)
 
-    const tailLeft = new THREE.Mesh(this._carGeo.taillight, tailLightMat)
+    const tailLeft = new THREE.Mesh(this._carGeo.taillight, _sharedMats.taillight)
     tailLeft.position.set(-0.5, yPos, -halfLength)
     group.add(tailLeft)
 
-    const tailRight = new THREE.Mesh(this._carGeo.taillight, tailLightMat)
+    const tailRight = new THREE.Mesh(this._carGeo.taillight, _sharedMats.taillight)
     tailRight.position.set(0.5, yPos, -halfLength)
     group.add(tailRight)
-  }
-
-  _addBumpers(group, bumperMat, yPos, halfLength) {
-    const frontBumper = new THREE.Mesh(this._carGeo.bumper, bumperMat)
-    frontBumper.position.set(0, yPos, halfLength + 0.05)
-    frontBumper.castShadow = true
-    group.add(frontBumper)
-
-    const rearBumper = new THREE.Mesh(this._carGeo.bumper, bumperMat)
-    rearBumper.position.set(0, yPos, -halfLength - 0.05)
-    rearBumper.castShadow = true
-    group.add(rearBumper)
-  }
-
-  _addSideMirrors(group, mirrorMat, yPos, zPos) {
-    const leftMirror = new THREE.Mesh(this._carGeo.sideMirror, mirrorMat)
-    leftMirror.position.set(-0.85, yPos, zPos)
-    leftMirror.castShadow = true
-    group.add(leftMirror)
-
-    const rightMirror = new THREE.Mesh(this._carGeo.sideMirror, mirrorMat)
-    rightMirror.position.set(0.85, yPos, zPos)
-    rightMirror.castShadow = true
-    group.add(rightMirror)
-  }
-
-  _addDoorHandles(group, handleMat, yPos, zFront, zRear) {
-    const leftFrontHandle = new THREE.Mesh(this._carGeo.doorHandle, handleMat)
-    leftFrontHandle.position.set(-0.76, yPos, zFront)
-    group.add(leftFrontHandle)
-
-    const leftRearHandle = new THREE.Mesh(this._carGeo.doorHandle, handleMat)
-    leftRearHandle.position.set(-0.76, yPos, -zRear)
-    group.add(leftRearHandle)
-
-    const rightFrontHandle = new THREE.Mesh(this._carGeo.doorHandle, handleMat)
-    rightFrontHandle.position.set(0.76, yPos, zFront)
-    group.add(rightFrontHandle)
-
-    const rightRearHandle = new THREE.Mesh(this._carGeo.doorHandle, handleMat)
-    rightRearHandle.position.set(0.76, yPos, -zRear)
-    group.add(rightRearHandle)
-  }
-
-  _addInterior(group, floorY, seatY, seatSpacing, rearSeatCount) {
-    const interiorMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1a1a,
-      roughness: 0.8,
-      metalness: 0.0,
-      depthWrite: true,
-    })
-    const seatMat = new THREE.MeshStandardMaterial({
-      color: 0x2a2a3a,
-      roughness: 0.7,
-      metalness: 0.0,
-      depthWrite: true,
-    })
-    const steeringMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1a1a,
-      roughness: 0.5,
-      metalness: 0.1,
-      depthWrite: true,
-    })
-    const dashMat = new THREE.MeshStandardMaterial({
-      color: 0x333333,
-      roughness: 0.6,
-      metalness: 0.1,
-      depthWrite: true,
-    })
-    const plateMat = new THREE.MeshStandardMaterial({
-      color: 0xeeeeee,
-      roughness: 0.5,
-      metalness: 0.0,
-      depthWrite: true,
-    })
-
-    const driverSeat = new THREE.Mesh(this._carGeo.seat, seatMat)
-    driverSeat.position.set(-0.25, seatY, 0.3)
-    driverSeat.name = 'driverSeat'
-    driverSeat.renderOrder = 0
-    group.add(driverSeat)
-
-    const driverSeatBack = new THREE.Mesh(this._carGeo.seatBack, seatMat)
-    driverSeatBack.position.set(-0.25, seatY + 0.25, 0.1)
-    driverSeatBack.name = 'driverSeatBack'
-    driverSeatBack.renderOrder = 0
-    group.add(driverSeatBack)
-
-    const passengerSeat = new THREE.Mesh(this._carGeo.seat, seatMat)
-    passengerSeat.position.set(0.25, seatY, 0.3)
-    passengerSeat.name = 'passengerSeat'
-    passengerSeat.renderOrder = 0
-    group.add(passengerSeat)
-
-    const passengerSeatBack = new THREE.Mesh(this._carGeo.seatBack, seatMat)
-    passengerSeatBack.position.set(0.25, seatY + 0.25, 0.1)
-    passengerSeatBack.name = 'passengerSeatBack'
-    passengerSeatBack.renderOrder = 0
-    group.add(passengerSeatBack)
-
-    const rearSeats = []
-    for (let i = 0; i < rearSeatCount; i++) {
-      const rearSeat = new THREE.Mesh(this._carGeo.seat, seatMat)
-      rearSeat.position.set(-0.25 + i * seatSpacing, seatY, -0.6)
-      rearSeat.scale.z = 0.8
-      rearSeat.name = `rearSeat_${i}`
-      rearSeat.renderOrder = 0
-      group.add(rearSeat)
-
-      const rearSeatBack = new THREE.Mesh(this._carGeo.seatBack, seatMat)
-      rearSeatBack.position.set(-0.25 + i * seatSpacing, seatY + 0.25, -0.8)
-      rearSeatBack.name = `rearSeatBack_${i}`
-      rearSeatBack.renderOrder = 0
-      group.add(rearSeatBack)
-
-      rearSeats.push({ seat: rearSeat, back: rearSeatBack })
-    }
-
-    const steeringWheel = new THREE.Mesh(this._carGeo.steeringWheel, steeringMat)
-    steeringWheel.position.set(-0.28, seatY + 0.35, 0.55)
-    steeringWheel.rotation.x = -Math.PI / 4
-    steeringWheel.name = 'steeringWheel'
-    steeringWheel.renderOrder = 0
-    group.add(steeringWheel)
-
-    const dashboard = new THREE.Mesh(this._carGeo.dashboard, dashMat)
-    dashboard.position.set(0, seatY + 0.15, 0.7)
-    dashboard.name = 'dashboard'
-    dashboard.renderOrder = 0
-    group.add(dashboard)
-
-    const rearPlate = new THREE.Mesh(this._carGeo.licensePlate, plateMat)
-    rearPlate.position.set(0, floorY + 0.08, -1.52)
-    rearPlate.name = 'licensePlate'
-    rearPlate.renderOrder = 0
-    group.add(rearPlate)
-
-    return {
-      config: {
-        floorY,
-        seatY,
-        seatSpacing,
-        rearSeatCount,
-        seatColor: seatMat.color.getHex(),
-        dashColor: dashMat.color.getHex(),
-      },
-      meshes: {
-        driverSeat,
-        driverSeatBack,
-        passengerSeat,
-        passengerSeatBack,
-        rearSeats,
-        steeringWheel,
-        dashboard,
-        licensePlate: rearPlate,
-      },
-      materials: {
-        interiorMat,
-        seatMat,
-        steeringMat,
-        dashMat,
-        plateMat,
-      },
-    }
-  }
-
-  _addUnderbody(group, yPos, width, length) {
-    const underbodyMat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      roughness: 0.9,
-      metalness: 0.0,
-    })
-    const underbody = new THREE.Mesh(this._carGeo.underbody, underbodyMat)
-    underbody.scale.set(width / 1.3, 1, length / 3.0)
-    underbody.position.set(0, yPos, 0)
-    group.add(underbody)
-  }
-
-  _addWheelWells(group, wellY, frontZ, rearZ, width) {
-    const wellMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0a0a,
-      roughness: 0.95,
-      metalness: 0.0,
-      side: THREE.DoubleSide,
-    })
-
-    const frontWellL = new THREE.Mesh(this._carGeo.wheelWellFront, wellMat)
-    frontWellL.position.set(-width, wellY, frontZ)
-    frontWellL.rotation.y = -Math.PI / 2
-    group.add(frontWellL)
-
-    const frontWellR = new THREE.Mesh(this._carGeo.wheelWellFront, wellMat)
-    frontWellR.position.set(width, wellY, frontZ)
-    frontWellR.rotation.y = Math.PI / 2
-    group.add(frontWellR)
-
-    const rearWellL = new THREE.Mesh(this._carGeo.wheelWellRear, wellMat)
-    rearWellL.position.set(-width, wellY, rearZ)
-    rearWellL.rotation.y = -Math.PI / 2
-    group.add(rearWellL)
-
-    const rearWellR = new THREE.Mesh(this._carGeo.wheelWellRear, wellMat)
-    rearWellR.position.set(width, wellY, rearZ)
-    rearWellR.rotation.y = Math.PI / 2
-    group.add(rearWellR)
   }
 
   _createCarGeometry() {
@@ -808,7 +203,7 @@ export class CarBuilder {
       shape.quadraticCurveTo(0.7, 0.4, 0.7, 0.25)
       shape.lineTo(0.7, 0)
       shape.lineTo(-0.7, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.2, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 4 })
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.2, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2 })
       geo.translate(0, 0, -1.6)
       return geo
     })()
@@ -820,7 +215,7 @@ export class CarBuilder {
       shape.quadraticCurveTo(0, 0.5, 0.4, 0.35)
       shape.lineTo(0.48, 0)
       shape.lineTo(-0.48, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 2.8, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02, bevelSegments: 2 })
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 2.8, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02, bevelSegments: 1 })
       geo.translate(0, 0, -1.4)
       return geo
     })()
@@ -834,7 +229,7 @@ export class CarBuilder {
       shape.quadraticCurveTo(0.8, 0.5, 0.8, 0.35)
       shape.lineTo(0.8, 0)
       shape.lineTo(-0.8, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.6, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 4 })
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.6, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 2 })
       geo.translate(0, 0, -1.8)
       return geo
     })()
@@ -846,7 +241,7 @@ export class CarBuilder {
       shape.quadraticCurveTo(0, 0.65, 0.5, 0.55)
       shape.lineTo(0.58, 0)
       shape.lineTo(-0.58, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.3, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 })
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3.3, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 1 })
       geo.translate(0, 0, -1.65)
       return geo
     })()
@@ -860,7 +255,7 @@ export class CarBuilder {
       shape.lineTo(0.9, 0.5)
       shape.lineTo(0.9, 0)
       shape.lineTo(-0.9, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 4.0, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 4 })
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 4.0, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 2 })
       geo.translate(0, 0, -2.0)
       return geo
     })()
@@ -872,86 +267,21 @@ export class CarBuilder {
       shape.quadraticCurveTo(0, 0.7, 0.58, 0.6)
       shape.lineTo(0.65, 0)
       shape.lineTo(-0.65, 0)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.3, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 })
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.3, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 1 })
       geo.translate(0, 0, -0.65)
       return geo
     })()
 
-    const vanRearGlass = new THREE.BoxGeometry(1.3, 0.7, 0.02)
-    const vanSideGlassL = new THREE.BoxGeometry(0.02, 0.7, 2.3)
-
-    const pillarA = new THREE.BoxGeometry(0.06, 0.42, 0.06)
-    const pillarB = new THREE.BoxGeometry(0.05, 0.45, 0.06)
-    const pillarC = new THREE.BoxGeometry(0.06, 0.42, 0.06)
-    const roofRail = new THREE.BoxGeometry(0.04, 0.04, 2.5)
-    const roofRailLong = new THREE.BoxGeometry(0.04, 0.04, 3.0)
-    const sill = new THREE.BoxGeometry(0.04, 0.05, 2.5)
-    const sillLong = new THREE.BoxGeometry(0.04, 0.05, 3.0)
-    const header = new THREE.BoxGeometry(0.85, 0.04, 0.04)
-    const headerWide = new THREE.BoxGeometry(1.1, 0.04, 0.04)
-    const roofPanel = new THREE.BoxGeometry(0.8, 0.02, 2.5)
-    const roofPanelWide = new THREE.BoxGeometry(1.05, 0.02, 3.0)
-
-    const wheelTire = new THREE.CylinderGeometry(1, 1, 0.22, 32, 1, false)
-    const wheelTireSide = new THREE.CircleGeometry(1, 32)
-    const wheelRim = new THREE.CylinderGeometry(0.55, 0.55, 0.24, 16, 1, false)
-    const wheelRimSide = new THREE.CircleGeometry(0.55, 16)
-    const wheelHubCap = new THREE.CylinderGeometry(0.2, 0.2, 0.26, 8, 1, false)
-    const wheelHubCapSide = new THREE.CircleGeometry(0.2, 8)
+    const wheelTire = new THREE.CylinderGeometry(1, 1, 0.22, 16, 1, false)
+    const wheelRim = new THREE.CylinderGeometry(0.55, 0.55, 0.24, 8, 1, false)
 
     const headlight = (() => {
-      const geo = new THREE.SphereGeometry(0.12, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2)
+      const geo = new THREE.SphereGeometry(0.12, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2)
       geo.scale(1.2, 0.6, 1)
       return geo
     })()
 
     const taillight = new THREE.BoxGeometry(0.25, 0.1, 0.08)
-    const bumper = new THREE.BoxGeometry(1.5, 0.12, 0.15)
-    const sideMirror = new THREE.SphereGeometry(0.08, 8, 6)
-    const doorHandle = new THREE.BoxGeometry(0.08, 0.03, 0.02)
-    const underbody = new THREE.BoxGeometry(1.3, 0.05, 3.0)
-
-    const seat = (() => {
-      const geo = new THREE.BoxGeometry(0.4, 0.4, 0.4, 1, 1, 1)
-      const pos = geo.attributes.position
-      for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i)
-        const y = pos.getY(i)
-        const z = pos.getZ(i)
-        if (y > 0) {
-          pos.setX(i, x * 0.9)
-          pos.setZ(i, z * 0.7)
-        }
-        if (z > 0 && y > -0.1) {
-          pos.setY(i, y + 0.15)
-        }
-      }
-      geo.computeVertexNormals()
-      return geo
-    })()
-
-    const seatBack = new THREE.BoxGeometry(0.38, 0.35, 0.08)
-    const steeringWheel = new THREE.TorusGeometry(0.12, 0.015, 8, 16)
-    const dashboard = new THREE.BoxGeometry(1.1, 0.2, 0.3)
-
-    const wheelWellFront = (() => {
-      const shape = new THREE.Shape()
-      shape.absarc(0, 0, 0.5, 0, Math.PI, false)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false })
-      geo.translate(0, 0, -0.05)
-      return geo
-    })()
-
-    const wheelWellRear = (() => {
-      const shape = new THREE.Shape()
-      shape.absarc(0, 0, 0.5, 0, Math.PI, false)
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false })
-      geo.translate(0, 0, -0.05)
-      return geo
-    })()
-
-    const exhaust = new THREE.CylinderGeometry(0.04, 0.04, 0.15, 8)
-    const licensePlate = new THREE.BoxGeometry(0.4, 0.12, 0.02)
 
     return {
       sedanBody: sedanBodyLower,
@@ -960,39 +290,10 @@ export class CarBuilder {
       suvCabin: suvGlassCabin,
       vanBody: vanBodyLower,
       vanCabin: vanGlassCabin,
-      vanRearGlass,
-      vanSideGlassL,
-      pillarA,
-      pillarB,
-      pillarC,
-      roofRail,
-      roofRailLong,
-      sill,
-      sillLong,
-      header,
-      headerWide,
-      roofPanel,
-      roofPanelWide,
       wheelTire,
-      wheelTireSide,
       wheelRim,
-      wheelRimSide,
-      wheelHubCap,
-      wheelHubCapSide,
       headlight,
       taillight,
-      bumper,
-      sideMirror,
-      doorHandle,
-      underbody,
-      seat,
-      seatBack,
-      steeringWheel,
-      dashboard,
-      wheelWellFront,
-      wheelWellRear,
-      exhaust,
-      licensePlate,
     }
   }
 
@@ -1036,8 +337,6 @@ export class CarBuilder {
         }
       }
     }
-
-    this._checkCarDistances()
   }
 
   _lerpAngle(current, target, factor) {
@@ -1045,95 +344,6 @@ export class CarBuilder {
     while (diff > Math.PI) diff -= Math.PI * 2
     while (diff < -Math.PI) diff += Math.PI * 2
     return current + diff * factor
-  }
-
-  _checkCarDistances() {
-    const minDist = 6
-    const decelFactor = 0.003
-    const accelThreshold = 8
-    for (let i = 0; i < this.cars.length; i++) {
-      for (let j = i + 1; j < this.cars.length; j++) {
-        const carA = this.cars[i]
-        const carB = this.cars[j]
-        const posA = carA.group.position
-        const posB = carB.group.position
-        const dist = posA.distanceTo(posB)
-
-        if (dist < minDist) {
-          const diff = new THREE.Vector3().subVectors(posB, posA).normalize()
-          const tangentA = carA.curve.getTangentAt(Math.max(0.002, Math.min(0.998, carA.progress)))
-          const dirA = new THREE.Vector3().copy(tangentA).multiplyScalar(carA.direction)
-
-          const tangentB = carB.curve.getTangentAt(Math.max(0.002, Math.min(0.998, carB.progress)))
-          const dirB = new THREE.Vector3().copy(tangentB).multiplyScalar(carB.direction)
-
-          const dotA = diff.dot(dirA)
-          const dotB = diff.dot(dirB)
-
-          if (dotA > 0) {
-            carA.progress -= decelFactor * carA.direction
-          }
-          if (dotB < 0) {
-            carB.progress += decelFactor * carB.direction
-          }
-
-          const separation = (minDist - dist) * 0.02
-          carA.group.position.x -= diff.x * separation
-          carA.group.position.z -= diff.z * separation
-          carB.group.position.x += diff.x * separation
-          carB.group.position.z += diff.z * separation
-
-          if (carA.closed) {
-            if (carA.progress >= 1) carA.progress -= 1
-            if (carA.progress < 0) carA.progress += 1
-          } else {
-            carA.progress = Math.max(0, Math.min(1, carA.progress))
-          }
-          if (carB.closed) {
-            if (carB.progress >= 1) carB.progress -= 1
-            if (carB.progress < 0) carB.progress += 1
-          } else {
-            carB.progress = Math.max(0, Math.min(1, carB.progress))
-          }
-        } else if (dist < accelThreshold) {
-          const recovery = (dist - minDist) / (accelThreshold - minDist)
-          const adjustment = decelFactor * 0.5 * (1 - recovery)
-          carA.progress += adjustment * carA.direction
-          carB.progress += adjustment * carB.direction
-          if (carA.closed) {
-            if (carA.progress >= 1) carA.progress -= 1
-            if (carA.progress < 0) carA.progress += 1
-          }
-          if (carB.closed) {
-            if (carB.progress >= 1) carB.progress -= 1
-            if (carB.progress < 0) carB.progress += 1
-          }
-        }
-      }
-    }
-  }
-
-  getPerformanceStats() {
-    let totalTriangles = 0
-    for (const car of this.cars) {
-      totalTriangles += this._countTriangles(this._carGeo)
-    }
-    return {
-      total: this.cars.length,
-      triangles: Math.round(totalTriangles),
-    }
-  }
-
-  _countTriangles(geoSet) {
-    let count = 0
-    for (const geo of Object.values(geoSet)) {
-      if (geo.index) {
-        count += geo.index.count / 3
-      } else if (geo.attributes.position) {
-        count += geo.attributes.position.count / 3
-      }
-    }
-    return count
   }
 
   dispose() {

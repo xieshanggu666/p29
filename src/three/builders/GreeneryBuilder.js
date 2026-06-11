@@ -35,7 +35,6 @@ export class GreeneryBuilder {
     const tree = treeGeo.clone()
     tree.traverse((child) => {
       if (child.isMesh) {
-        child.material = child.material.clone()
         child.castShadow = true
         child.receiveShadow = true
         child.userData = { interactive: true, greeneryId: id, category: 'tree', treeType: type }
@@ -210,11 +209,13 @@ export class GreeneryBuilder {
   }
 
   updateAnimation(elapsed) {
-    this.greeneryGroup.children.forEach((group, i) => {
+    const children = this.greeneryGroup.children
+    for (let i = 0, len = children.length; i < len; i++) {
+      const group = children[i]
       if (group.isGroup && group.userData.category === 'tree') {
         group.rotation.z = Math.sin(elapsed * 0.5 + i * 0.7) * 0.02
       }
-    })
+    }
   }
 
   dispose() {

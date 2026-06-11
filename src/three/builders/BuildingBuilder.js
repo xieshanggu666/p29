@@ -16,50 +16,32 @@ export class BuildingBuilder {
 
   _createMaterials() {
     return {
-      commercial: new THREE.MeshPhysicalMaterial({
+      commercial: new THREE.MeshStandardMaterial({
         color: 0x4488cc,
         roughness: 0.25,
         metalness: 0.8,
-        clearcoat: 0.3,
-        clearcoatRoughness: 0.2,
-        envMapIntensity: 1.5,
       }),
-      office: new THREE.MeshPhysicalMaterial({
+      office: new THREE.MeshStandardMaterial({
         color: 0x6699bb,
         roughness: 0.35,
         metalness: 0.6,
-        clearcoat: 0.2,
-        clearcoatRoughness: 0.3,
-        envMapIntensity: 1.3,
       }),
-      residential: new THREE.MeshPhysicalMaterial({
+      residential: new THREE.MeshStandardMaterial({
         color: 0xddaa77,
         roughness: 0.65,
         metalness: 0.15,
-        clearcoat: 0.1,
-        clearcoatRoughness: 0.4,
       }),
-      retail: new THREE.MeshPhysicalMaterial({
+      retail: new THREE.MeshStandardMaterial({
         color: 0xcc6644,
         roughness: 0.3,
         metalness: 0.5,
-        clearcoat: 0.25,
-        clearcoatRoughness: 0.2,
-        envMapIntensity: 1.4,
       }),
-      glass: new THREE.MeshPhysicalMaterial({
+      glass: new THREE.MeshStandardMaterial({
         color: 0x99ccff,
-        roughness: 0.02,
-        metalness: 0.05,
-        transmission: 0.75,
+        roughness: 0.05,
+        metalness: 0.1,
         transparent: true,
-        opacity: 0.5,
-        ior: 1.5,
-        thickness: 0.1,
-        envMapIntensity: 2.0,
-        reflectivity: 0.9,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.05,
+        opacity: 0.4,
       }),
       roof: new THREE.MeshStandardMaterial({
         color: 0x334455,
@@ -115,7 +97,7 @@ export class BuildingBuilder {
 
     const bodyGeo = this._createBuildingGeometry(width, height, depth)
     const bodyMat = this.materials[type] || this.materials.commercial
-    const body = new THREE.Mesh(bodyGeo, bodyMat.clone())
+    const body = new THREE.Mesh(bodyGeo, bodyMat)
     body.castShadow = true
     body.receiveShadow = true
     body.position.y = 0
@@ -425,24 +407,30 @@ export class BuildingBuilder {
     const { group, bodyMesh } = buildingData
 
     if (show) {
+      if (bodyMesh.material && !bodyMesh.userData._materialCloned) {
+        bodyMesh.material = bodyMesh.material.clone()
+        bodyMesh.userData._materialCloned = true
+      }
       if (bodyMesh.material) {
         bodyMesh.material.transparent = true
         bodyMesh.material.opacity = 0.12
         bodyMesh.material.depthWrite = false
+        bodyMesh.material.needsUpdate = true
       }
 
-      const glassFacade = group.getObjectByName ? group.getObjectByName('glassFacade') : null
+      const glassFacade = group.getObjectByName('glassFacade')
       if (glassFacade) {
         glassFacade.visible = false
       }
     } else {
-      if (bodyMesh.material) {
+      if (bodyMesh.material && bodyMesh.userData._materialCloned) {
         bodyMesh.material.transparent = false
         bodyMesh.material.opacity = 1
         bodyMesh.material.depthWrite = true
+        bodyMesh.material.needsUpdate = true
       }
 
-      const glassFacade = group.getObjectByName ? group.getObjectByName('glassFacade') : null
+      const glassFacade = group.getObjectByName('glassFacade')
       if (glassFacade) {
         glassFacade.visible = true
       }

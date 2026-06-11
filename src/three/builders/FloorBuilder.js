@@ -8,6 +8,7 @@ export class FloorBuilder {
     this._tempMatrix = new THREE.Matrix4()
     this._tempVector = new THREE.Vector3()
     this._tempQuaternion = new THREE.Quaternion()
+    this._elevatorCars = []
   }
 
   _createMaterials() {
@@ -491,6 +492,7 @@ export class FloorBuilder {
       floors: floorCount,
     }
     elevatorGroup.add(elevatorCar)
+    this._elevatorCars.push(elevatorCar)
 
     const cableCount = 2
     const cableGeo = new THREE.CylinderGeometry(0.02, 0.02, totalHeight, 4)
@@ -573,24 +575,21 @@ export class FloorBuilder {
   }
 
   updateAnimation(delta, elapsed) {
-    for (const [, floorGroup] of this._floorGroups) {
-      const elevatorCar = floorGroup.getObjectByName('elevator_car')
-      if (elevatorCar && elevatorCar.userData.isElevatorCar) {
-        const { baseY, speed, floorHeight, floors } = elevatorCar.userData
+    for (const elevatorCar of this._elevatorCars) {
+      const { baseY, speed, floorHeight, floors } = elevatorCar.userData
 
-        const cycleTime = (floors * floorHeight) / speed
-        const phase = (elapsed % cycleTime) / cycleTime
+      const cycleTime = (floors * floorHeight) / speed
+      const phase = (elapsed % cycleTime) / cycleTime
 
-        let targetFloor
-        if (phase < 0.5) {
-          targetFloor = phase * 2 * (floors - 1)
-        } else {
-          targetFloor = (1 - phase) * 2 * (floors - 1)
-        }
-
-        const targetY = baseY + targetFloor * floorHeight
-        elevatorCar.position.y += (targetY - elevatorCar.position.y) * delta * 2
+      let targetFloor
+      if (phase < 0.5) {
+        targetFloor = phase * 2 * (floors - 1)
+      } else {
+        targetFloor = (1 - phase) * 2 * (floors - 1)
       }
+
+      const targetY = baseY + targetFloor * floorHeight
+      elevatorCar.position.y += (targetY - elevatorCar.position.y) * delta * 2
     }
   }
 
@@ -641,6 +640,7 @@ export class FloorBuilder {
       })
     }
     this._floorGroups.clear()
+    this._elevatorCars = []
 
     for (const key in this._materials) {
       if (this._materials[key]) {

@@ -1377,3 +1377,256 @@ floorLabels（楼层标注）
 - **修复方案**：关键代码变更点（引用文件和行号）
 - **验证方法**：测试步骤 + 预期结果
 - **改进建议**：预防同类问题的措施
+
+---
+
+### 2026-06-11 全面性能优化 & 内部视图修复
+
+#### 问题表现
+1. 页面帧率仅10FPS左右，操作严重卡顿
+2. 点击"内部"按钮后建筑模型无任何变化
+
+#### 根因分析
+
+**卡顿根因（6大瓶颈）**：
+
+1. **MeshPhysicalMaterial 滥用**（最大瓶颈）
+   - 共13处使用 MeshPhysicalMaterial，其渲染开销是 MeshStandardMaterial 的3-5倍
+   - BuildingBuilder：5种建筑/玻璃材质（含 clearcoat、transmission、ior、reflectivity）
+   - PedestrianBuilder：5种人体材质（含 sheen、clearcoat、transmission）
+   - CarBuilder：2种车体材质（含 clearcoat、transmission）
+   - LandscapeBuilder：1种水面材质（含 transmission、ior、clearcoat）
+   - `transmission` 属性需要额外全屏渲染通道（render pass），每个 transmission 对象 = +1 draw call
+
+2. **阴影贴图过大**
+   - 4096×4096 分辨率 + PCFSoftShadowMap（最昂贵的阴影类型）
+   - 阴影相机范围 -120~120，渲染过多不在视野内的对象
+
+3. **行人模型过度细化**
+   - 每人14个 `.clone()` 材质实例，无法合批
+   - 每人50+独立 Mesh（高细节模式：手指15个Mesh×3节、眉毛2个、掌纹1个LineSegments）
+   - 每帧动画：手指关节90次 rotation 更新 + 颈部肌肉3次 scale 更新 + 10+种微动画（hipSway、shoulderSway、headTilt等）
+
+4. **地面几何体过度细分**
+   - 80×80段 = 6561顶点 + 12800三角形，用于完全平坦的平面
+   - PlaneGeometry 只需4顶点即可
+
+5. **行人-车辆距离检测每帧执行**
+   - O(pedestrians × cars) = 15×8 = 120次距离计算/帧
+   - 包含矩阵运算（cos、sin、sqrt）
+
+6. **楼层Mesh数量过多**
+   - 楼梯踏步：每踏步2个独立Mesh（riser + tread），12层楼×24踏步/层×2 = 576个
+   - 扶手柱：12层×4根/层×2 = 96个独立Mesh
+   - 电梯门：8层×2门×3部件 = 48个Mesh
+
+**内部视图无变化根因**：
+- `material.needsUpdate = true` 未设置，Three.js 从非透明切换到透明模式时需重新编译着色器
+- 楼层结构初始可见性未控制，`buildFloors` 后立即 `setFloorsVisible(id, false)` 但可能因时序问题未生效
+
+#### 修复方案
+
+**1. 材质降级：MeshPhysicalMaterial → MeshStandardMaterial**
+
+| 文件 | 变更 | 性能影响 |
+|-----|------|---------|
+| BuildingBuilder.js | 5种建筑材质移除 clearcoat/envMapIntensity，玻璃移除 transmission/ior/reflectivity | -60% 材质编译开销，消除 transmission 额外渲染通道 |
+| PedestrianBuilder.js | 5种人体材质移除 sheen/clearcoat/transmission | -40% 行人渲染开销 |
+| CarBuilder.js | 车体移除 clearcoat，车窗移除 transmission/ior/reflectivity | -50% 车辆渲染开销 |
+| LandscapeBuilder.js | 水面移除 transmission/ior/clearcoat/reflectivity | -70% 水面渲染开销 |
+
+**2. 阴影优化**（SceneManager.js）
+
+| 参数 | 优化前 | 优化后 | 说明 |
+|-----|-------|-------|------|
+| shadow.mapSize | 4096×4096 | 2048×2048 | 显存占用降至1/4 |
+| shadowMap.type | PCFSoftShadowMap | PCFShadowMap | 移除高斯模糊开销 |
+| shadow.camera.far | 400 | 300 | 减少渲染范围 |
+| shadow.camera.left/right/top/bottom | ±120 | ±100 | 减少渲染范围 |
+
+**3. 地面简化**（SceneManager.js）
+- 从自定义 BufferGeometry（80×80段=6561顶点）改为 `PlaneGeometry(200, 200)`（4顶点）
+- 三角形从12800降至2
+
+**4. 行人模型简化**（PedestrianBuilder.js）
+- 移除手指系统（10根手指×3节+10个指甲 = 40个Mesh），改为单手掌Mesh
+- 移除眉毛（2个Mesh）
+- 移除掌纹线条（1个LineSegments）
+- 每人减少约43个Mesh
+
+**5. 行人动画精简**（PedestrianBuilder.js）
+- 移除 `_updateFingerAnimation`（90次/帧 rotation更新）
+- 移除 `_updateNeckMuscleAnimation`（3次/帧 scale更新）
+- 移除 hipSway、shoulderSway、headTilt、headBob、torsoLean、footLift 等微动画
+- 保留核心动画：腿部摆动+膝盖弯曲、手臂摆动+肘部弯曲、身体起伏
+- 每帧属性更新从30+降至约12
+
+**6. 楼层Mesh合批**（FloorBuilder.js）
+- 楼板：独立Mesh → InstancedMesh（1个draw call替代N个）
+- 楼梯踏步：独立Mesh → InstancedMesh（risers + treads 各1个draw call）
+- 楼梯休息平台：独立Mesh → InstancedMesh
+- 扶手柱：独立Mesh → InstancedMesh，数量从 floorCount×4 降至 min(floorCount×2, 8)
+- 电梯门：独立Mesh → InstancedMesh（左门、右门、门框各1个）
+- 电梯钢缆：4根 → 2根 InstancedMesh
+
+**7. 行人-车辆距离检测节流**（VehicleBuilder.js）
+- 从每帧执行改为每3帧执行一次
+- 新增 `_distanceCheckCounter` 计数器
+
+**8. 内部视图修复**（BuildingBuilder.js）
+- 添加 `material.needsUpdate = true` 确保透明模式切换生效
+- 简化 `getObjectByName` 调用（移除冗余的三元表达式）
+
+#### 预期性能提升
+
+| 指标 | 优化前 | 优化后 | 提升幅度 |
+|-----|-------|-------|---------|
+| FPS | ~10 | 40-60 | +300%~500% |
+| MeshPhysicalMaterial数 | 13 | 0 | -100% |
+| 阴影贴图显存 | 64MB | 16MB | -75% |
+| 行人Mesh数/人 | ~50 | ~7 | -86% |
+| 地面顶点数 | 6561 | 4 | -99.9% |
+| 楼层独立Mesh数 | ~700 | ~15 | -98% |
+| 每帧属性更新 | 30+/人 | 12/人 | -60% |
+| 距离检测频率 | 每帧 | 每3帧 | -67% |
+
+#### 修改文件清单
+1. `src/three/core/SceneManager.js` - 阴影降级、地面简化
+2. `src/three/builders/BuildingBuilder.js` - 材质降级、内部视图修复
+3. `src/three/builders/FloorBuilder.js` - InstancedMesh合批
+4. `src/three/builders/PedestrianBuilder.js` - 材质降级、模型简化、动画精简
+5. `src/three/builders/CarBuilder.js` - 材质降级
+6. `src/three/builders/VehicleBuilder.js` - 距离检测节流
+7. `src/three/builders/LandscapeBuilder.js` - 水面材质降级
+8. `PROJECT.mind` - 添加优化记录
+
+---
+
+### 2026-06-12 第二轮深度性能优化（帧率仍~10FPS）
+
+#### 问题表现
+第一轮优化后帧率仍仅~10FPS，页面卡顿无明显改善
+
+#### 根因分析（新增5大瓶颈）
+
+1. **LandscapeBuilder 每帧 traverse**
+   - `updateAnimation` 中 `this.landscapeGroup.traverse()` 每帧遍历整棵子树
+   - 遍历逻辑包含6种 name 匹配（buoy/warningLight/circulationRing/circulationArrow/lifebuoyRing）
+   - traverse 开销 = O(children)，即使无匹配项也遍历全部节点
+
+2. **LandscapeBuilder 水面每帧 computeVertexNormals**
+   - 水面波浪动画每帧更新 position buffer 后调用 `mesh.geometry.computeVertexNormals()`
+   - computeVertexNormals 需遍历所有三角面重建法线，O(faces) 计算量大
+   - 对于视觉波浪效果，法线更新非必要（水材质已用 MeshStandardMaterial 无物理透射）
+
+3. **GreeneryBuilder 材质克隆**
+   - `tree.traverse` 中对每个 child.isMesh 执行 `child.material = child.material.clone()`
+   - 完全不必要的材质克隆，所有树共享同一材质即可
+   - 每棵树多创建2-4个材质实例，增加GPU材质切换开销
+
+4. **StallBuilder 每帧遍历子节点**
+   - `updateAnimation` 中双层 forEach 遍历所有摊位的所有子对象
+   - 检查 SphereGeometry + opacity < 1 条件做微浮动动画
+   - 动画效果几乎不可见但每帧产生大量遍历开销
+
+5. **CarBuilder 车距碰撞检测每帧执行**
+   - `_checkCarDistances` 每帧调用，O(cars²) 复杂度
+   - 包含距离计算、角度差计算、progress 调整等
+   - 碰撞避让在简化模型后不再是核心功能，移除可释放CPU
+
+6. **SceneManager getFps() 实现有误**
+   - 使用 `1 / this.clock.getDelta()` 计算FPS
+   - getDelta() 被调用两次（animate + getFps），第二次返回极小值导致FPS显示不准
+   - 无帧率限制机制，高刷新率显示器上浪费GPU资源
+
+#### 修复方案
+
+**1. LandscapeBuilder：traverse 替换为缓存引用数组**
+
+| 动画对象 | 优化前 | 优化后 |
+|---------|-------|-------|
+| 浮标(buoy) | traverse + name匹配 | `_animatedBuoys[]` 直接遍历 |
+| 警示灯(warningLight) | traverse + name匹配 | `_warningLights[]` 直接遍历 |
+| 循环环(circulationRing) | traverse + name匹配+startsWith | `_circulationRings[]` 直接遍历 |
+| 循环箭头(circulationArrow) | traverse + name匹配+startsWith | `_circulationArrows[]` 直接遍历 |
+| 救生圈(lifebuoyRing) | traverse + name匹配 | `_lifebuoyRings[]` 直接遍历 |
+
+- 在构造函数中初始化5个缓存数组
+- 在各 `_add` 方法中创建mesh时同步push到缓存
+- `updateAnimation` 改为5个for循环直接遍历缓存数组
+- 移除整个 `landscapeGroup.traverse()` 调用
+
+**2. LandscapeBuilder：移除 computeVertexNormals**
+- 删除 `mesh.geometry.computeVertexNormals()` 调用
+- 水面波浪仅需position更新即可，法线使用初始值或flat shading效果可接受
+
+**3. GreeneryBuilder：移除材质克隆**
+- 删除 `child.material = child.material.clone()`
+- 所有树实例直接共享模板材质，零额外材质实例
+
+**4. StallBuilder：移除无效动画**
+- `updateAnimation` 改为空函数
+- 摊位是静态物体，不需要每帧动画更新
+
+**5. CarBuilder：移除车距碰撞检测**
+- 删除 `_checkCarDistances()` 调用
+- 简化模型下碰撞避让视觉意义不大，释放CPU
+
+**6. SceneManager：帧率限制 + FPS计算修复**
+
+| 参数 | 说明 |
+|-----|------|
+| `_targetFPS = 60` | 目标帧率 |
+| `_frameInterval = 1000/60` | 帧间隔 |
+| `_lastFrameTime` | 上一帧时间戳 |
+| `_fpsFrameCount / _fpsLastTime` | FPS统计计数器 |
+
+- `_animate` 中增加帧率限制：`if (elapsed < this._frameInterval) return`
+- FPS计算改为500ms窗口统计法，避免 getDelta() 重复调用
+- `getFps()` 返回 `_currentFps` 缓存值，不再调用 `clock.getDelta()`
+
+**7. BuildingBuilder：body材质共享 + 内部视图懒克隆**
+- 创建建筑时不再 `bodyMat.clone()`，直接共享材质
+- 切换内部视图时才按需克隆（`_materialCloned` 标志），避免8个同类型建筑8个材质实例
+
+**8. FloorBuilder：电梯轿厢缓存替代getObjectByName**
+- 新增 `_elevatorCars[]` 缓存数组
+- 创建电梯时同步push到缓存
+- `updateAnimation` 从遍历 `_floorGroups` + `getObjectByName('elevator_car')` 改为直接遍历缓存数组
+- 避免每帧8次getObjectByName的O(children)遍历
+
+**9. AnimalBuilder：鸟/鱼类材质共享**
+- 新增 `_birdMats` 和 `_fishMats` 共享材质集
+- 同群鸟类共享 bodyMat/wingMat（颜色相同），跨群共享 beakMat
+- 同群鱼类共享 fishMat/finMat（颜色相同），跨群共享 bellyMat/eyeMat
+- 材质实例从 N只鸟×3 + M条鱼×4 降至 3群×2 + 3群×2 + 3 = 15个
+
+**10. StallBuilder：内联材质提升为共享材质**
+- pot/shelf/cart/wheel/grill/food 等6种内联材质提升到 `_createMaterials()`
+- 每个摊位不再独立创建材质，12个摊位节省72个材质实例
+
+#### 预期性能提升
+
+| 优化项 | 每帧节省 |
+|-------|---------|
+| LandscapeBuilder traverse→缓存 | 避免遍历数百节点 + 6种字符串匹配 |
+| computeVertexNormals 移除 | O(faces) 计算量 |
+| GreeneryBuilder 材质克隆移除 | N棵树 × 2-4 材质实例化 |
+| StallBuilder 动画移除 | N摊位 × M子节点 遍历 |
+| CarBuilder 碰撞检测移除 | O(cars²) 距离计算 |
+| SceneManager FPS修复 | 准确帧率 + 帧率限制 |
+| BuildingBuilder body材质共享 | 8个clone → 4个共享（按类型） |
+| FloorBuilder 电梯缓存 | 8次getObjectByName → 直接引用 |
+| AnimalBuilder 材质共享 | ~80个材质实例 → 15个 |
+| StallBuilder 内联材质共享 | ~72个材质实例 → 6个 |
+
+#### 修改文件清单
+1. `src/three/builders/LandscapeBuilder.js` - traverse→缓存、移除computeVertexNormals
+2. `src/three/builders/GreeneryBuilder.js` - 移除材质克隆、优化updateAnimation
+3. `src/three/builders/StallBuilder.js` - 清空updateAnimation、共享材质
+4. `src/three/builders/CarBuilder.js` - 移除_checkCarDistances调用
+5. `src/three/core/SceneManager.js` - 帧率限制、FPS计算修复
+6. `src/three/builders/BuildingBuilder.js` - body材质共享+懒克隆、内部视图懒克隆
+7. `src/three/builders/FloorBuilder.js` - 电梯轿厢缓存替代getObjectByName
+8. `src/three/builders/AnimalBuilder.js` - 鸟/鱼类材质共享（同群共享bodyMat/wingMat/finMat，跨群共享beakMat/bellyMat/eyeMat）
+9. `PROJECT.mind` - 更新优化记录

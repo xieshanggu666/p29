@@ -12,6 +12,25 @@ export class AnimalBuilder {
 
     this._birdGeo = this._createBirdGeometry()
     this._fishGeo = this._createFishGeometry()
+    this._birdMats = this._createBirdMaterials()
+    this._fishMats = this._createFishMaterials()
+  }
+
+  _createBirdMaterials() {
+    return {
+      body: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6, metalness: 0.1 }),
+      wing: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7, metalness: 0.05, side: THREE.DoubleSide }),
+      beak: new THREE.MeshStandardMaterial({ color: 0xcc8800, roughness: 0.5 }),
+    }
+  }
+
+  _createFishMaterials() {
+    return {
+      body: new THREE.MeshStandardMaterial({ color: 0xcc8844, roughness: 0.3, metalness: 0.5 }),
+      belly: new THREE.MeshStandardMaterial({ color: 0xddccaa, roughness: 0.4, metalness: 0.3 }),
+      fin: new THREE.MeshStandardMaterial({ color: 0xcc8844, roughness: 0.5, metalness: 0.3, side: THREE.DoubleSide, transparent: true, opacity: 0.85 }),
+      eye: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.8 }),
+    }
   }
 
   buildFromConfig(config) {
@@ -41,24 +60,15 @@ export class AnimalBuilder {
       closed
     )
 
+    const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.1 })
+    const wingMat = new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.05, side: THREE.DoubleSide })
+
     const birdDataList = []
 
     for (let i = 0; i < count; i++) {
       const birdGroup = new THREE.Group()
       birdGroup.name = `bird_${id}_${i}`
       birdGroup.userData = { interactive: true, animalId: id, category: 'bird' }
-
-      const bodyMat = new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.6,
-        metalness: 0.1,
-      })
-      const wingMat = new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.7,
-        metalness: 0.05,
-        side: THREE.DoubleSide,
-      })
 
       const body = new THREE.Mesh(this._birdGeo.body, bodyMat)
       body.castShadow = true
@@ -69,10 +79,7 @@ export class AnimalBuilder {
       head.castShadow = true
       birdGroup.add(head)
 
-      const beak = new THREE.Mesh(this._birdGeo.beak, new THREE.MeshStandardMaterial({
-        color: 0xcc8800,
-        roughness: 0.5,
-      }))
+      const beak = new THREE.Mesh(this._birdGeo.beak, this._birdMats.beak)
       beak.position.set(0.4, 0.02, 0)
       birdGroup.add(beak)
 
@@ -143,29 +150,8 @@ export class AnimalBuilder {
       radii,
     }
 
-    const fishMat = new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.3,
-      metalness: 0.5,
-    })
-    const bellyMat = new THREE.MeshStandardMaterial({
-      color: 0xddccaa,
-      roughness: 0.4,
-      metalness: 0.3,
-    })
-    const finMat = new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.5,
-      metalness: 0.3,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.85,
-    })
-    const eyeMat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      roughness: 0.2,
-      metalness: 0.8,
-    })
+    const fishMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.5 })
+    const finMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.3, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
 
     const fishDataList = []
 
@@ -177,7 +163,7 @@ export class AnimalBuilder {
       const body = new THREE.Mesh(this._fishGeo.body, fishMat)
       fishGroup.add(body)
 
-      const belly = new THREE.Mesh(this._fishGeo.belly, bellyMat)
+      const belly = new THREE.Mesh(this._fishGeo.belly, this._fishMats.belly)
       fishGroup.add(belly)
 
       const tail = new THREE.Mesh(this._fishGeo.tail, finMat)
@@ -200,11 +186,11 @@ export class AnimalBuilder {
       rightPecFin.name = 'rightPecFin'
       fishGroup.add(rightPecFin)
 
-      const leftEye = new THREE.Mesh(this._fishGeo.eye, eyeMat)
+      const leftEye = new THREE.Mesh(this._fishGeo.eye, this._fishMats.eye)
       leftEye.position.set(0.22, 0.04, 0.06)
       fishGroup.add(leftEye)
 
-      const rightEye = new THREE.Mesh(this._fishGeo.eye, eyeMat)
+      const rightEye = new THREE.Mesh(this._fishGeo.eye, this._fishMats.eye)
       rightEye.position.set(0.22, 0.04, -0.06)
       fishGroup.add(rightEye)
 

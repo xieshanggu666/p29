@@ -5,6 +5,7 @@ import { PedestrianBuilder } from './PedestrianBuilder.js'
 const PED_CAR_AVOID_DIST = 3.0
 const PED_CAR_SLOW_DIST = 6.0
 const PED_RADIUS = 0.4
+const DISTANCE_CHECK_INTERVAL = 3
 
 const CAR_BOUNDING = {
   sedan: { halfLength: 1.7, halfWidth: 0.8 },
@@ -23,6 +24,7 @@ export class VehicleBuilder {
 
     this.carBuilder = new CarBuilder(this.vehicleGroup)
     this.pedestrianBuilder = new PedestrianBuilder(this.vehicleGroup, camera)
+    this._distanceCheckCounter = 0
   }
 
   buildFromConfig(config) {
@@ -41,7 +43,11 @@ export class VehicleBuilder {
   updateAnimation(delta, elapsed) {
     this.pedestrianBuilder.updateAnimation(delta, elapsed)
     this.carBuilder.updateAnimation(delta, elapsed)
-    this._checkPedestrianCarDistances()
+    this._distanceCheckCounter++
+    if (this._distanceCheckCounter >= DISTANCE_CHECK_INTERVAL) {
+      this._distanceCheckCounter = 0
+      this._checkPedestrianCarDistances()
+    }
   }
 
   _getCarBoundingBox(car) {

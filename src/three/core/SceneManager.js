@@ -12,6 +12,12 @@ export class SceneManager {
     this.animationCallbacks = []
     this.isRunning = false
     this._rafId = null
+    this._targetFPS = 60
+    this._frameInterval = 1000 / 60
+    this._lastFrameTime = 0
+    this._fpsFrameCount = 0
+    this._fpsLastTime = performance.now()
+    this._currentFps = 60
 
     this._init()
   }
@@ -64,7 +70,7 @@ export class SceneManager {
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.shadowMap.type = THREE.PCFShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.4
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -91,15 +97,15 @@ export class SceneManager {
     const directionalLight = new THREE.DirectionalLight(0xffeedd, 1.8)
     directionalLight.position.set(50, 80, 30)
     directionalLight.castShadow = true
-    directionalLight.shadow.mapSize.width = 4096
-    directionalLight.shadow.mapSize.height = 4096
+    directionalLight.shadow.mapSize.width = 2048
+    directionalLight.shadow.mapSize.height = 2048
     directionalLight.shadow.camera.near = 0.5
-    directionalLight.shadow.camera.far = 400
-    directionalLight.shadow.camera.left = -120
-    directionalLight.shadow.camera.right = 120
-    directionalLight.shadow.camera.top = 120
-    directionalLight.shadow.camera.bottom = -120
-    directionalLight.shadow.bias = -0.0005
+    directionalLight.shadow.camera.far = 300
+    directionalLight.shadow.camera.left = -100
+    directionalLight.shadow.camera.right = 100
+    directionalLight.shadow.camera.top = 100
+    directionalLight.shadow.camera.bottom = -100
+    directionalLight.shadow.bias = -0.001
     directionalLight.shadow.normalBias = 0.02
     this.scene.add(directionalLight)
 
@@ -116,34 +122,8 @@ export class SceneManager {
   }
 
   _createGround() {
-    const groundGeo = new THREE.BufferGeometry()
-    const size = 200
-    const segments = 80
-    const vertices = []
-    const indices = []
-    const step = size / segments
-    const half = size / 2
-
-    for (let i = 0; i <= segments; i++) {
-      for (let j = 0; j <= segments; j++) {
-        vertices.push(-half + j * step, 0, -half + i * step)
-      }
-    }
-
-    for (let i = 0; i < segments; i++) {
-      for (let j = 0; j < segments; j++) {
-        const a = i * (segments + 1) + j
-        const b = a + 1
-        const c = a + (segments + 1)
-        const d = c + 1
-        indices.push(a, c, b)
-        indices.push(b, c, d)
-      }
-    }
-
-    groundGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-    groundGeo.setIndex(indices)
-    groundGeo.computeVertexNormals()
+    const groundGeo = new THREE.PlaneGeometry(200, 200)
+    groundGeo.rotateX(-Math.PI / 2)
 
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x556b5a,
@@ -201,20 +181,32 @@ export class SceneManager {
     if (!this.isRunning) return
     this._rafId = requestAnimationFrame(() => this._animate())
 
+    const now = performance.now()
+    const elapsed = now - this._lastFrameTime
+    if (elapsed < this._frameInterval) return
+    this._lastFrameTime = now - (elapsed % this._frameInterval)
+
     const delta = this.clock.getDelta()
-    const elapsed = this.clock.getElapsedTime()
+    const elapsedSec = this.clock.getElapsedTime()
 
     this.controls.update()
 
     for (let i = 0; i < this.animationCallbacks.length; i++) {
-      this.animationCallbacks[i](delta, elapsed)
+      this.animationCallbacks[i](delta, elapsedSec)
     }
 
     this.renderer.render(this.scene, this.camera)
+
+    this._fpsFrameCount++
+    if (now - this._fpsLastTime >= 500) {
+      this._currentFps = Math.round((this._fpsFrameCount * 1000) / (now - this._fpsLastTime))
+      this._fpsFrameCount = 0
+      this._fpsLastTime = now
+    }
   }
 
   getFps() {
-    return Math.round(1 / this.clock.getDelta())
+    return this._currentFps
   }
 
   dispose() {

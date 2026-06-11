@@ -9,6 +9,11 @@ export class LandscapeBuilder {
     this.waterMeshes = []
     this.circulationParticles = []
     this.roadPaths = []
+    this._animatedBuoys = []
+    this._warningLights = []
+    this._circulationRings = []
+    this._circulationArrows = []
+    this._lifebuoyRings = []
   }
 
   setRoadPaths(roadPaths) {
@@ -199,19 +204,12 @@ export class LandscapeBuilder {
     geo.setIndex(indices)
     geo.computeVertexNormals()
 
-    const mat = new THREE.MeshPhysicalMaterial({
+    const mat = new THREE.MeshStandardMaterial({
       color: waterColor || 0x1a6b8a,
       roughness: 0.02,
-      metalness: 0.1,
-      transmission: 0.5,
+      metalness: 0.3,
       transparent: true,
-      opacity: 0.8,
-      envMapIntensity: 2.5,
-      ior: 1.33,
-      thickness: 0.5,
-      clearcoat: 0.8,
-      clearcoatRoughness: 0.05,
-      reflectivity: 0.8,
+      opacity: 0.7,
       side: THREE.DoubleSide,
       specularIntensity: 1.0,
       specularColor: new THREE.Color(0xffffff),
@@ -380,6 +378,7 @@ export class LandscapeBuilder {
     ring.rotation.x = Math.PI / 2
     ring.name = `circulationRing_${type}`
     markerGroup.add(ring)
+    this._circulationRings.push(ring)
 
     const arrowGeo = new THREE.ConeGeometry(0.2, 0.5, 6)
     const arrowMat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.2 })
@@ -390,6 +389,7 @@ export class LandscapeBuilder {
     }
     arrow.name = `circulationArrow_${type}`
     markerGroup.add(arrow)
+    this._circulationArrows.push(arrow)
 
     markerGroup.position.set(pos[0], 0, pos[1])
     markerGroup.name = `circulation_${type}`
@@ -668,6 +668,7 @@ export class LandscapeBuilder {
         buoy.name = 'boundaryBuoy'
         buoy.userData = { isBuoy: true }
         group.add(buoy)
+        this._animatedBuoys.push(buoy)
       }
 
       if (sidePoints.length > 1) {
@@ -821,6 +822,7 @@ export class LandscapeBuilder {
     ring.rotation.x = Math.PI / 2
     ring.name = 'lifebuoyRing'
     buoyGroup.add(ring)
+    this._lifebuoyRings.push(ring)
 
     const stripeGeo = new THREE.TorusGeometry(0.35, 0.1, 8, 16, Math.PI / 2)
     const stripeMat = new THREE.MeshStandardMaterial({
@@ -955,6 +957,7 @@ export class LandscapeBuilder {
     light.position.y = 1.85
     light.name = 'warningLight'
     signGroup.add(light)
+    this._warningLights.push(light)
 
     signGroup.position.set(pos[0], 0, pos[1])
     group.add(signGroup)
@@ -976,7 +979,6 @@ export class LandscapeBuilder {
         positions.setY(i, baseY + wave)
       }
       positions.needsUpdate = true
-      mesh.geometry.computeVertexNormals()
     }
 
     for (const particle of this.circulationParticles) {
@@ -989,24 +991,25 @@ export class LandscapeBuilder {
       particle.position.y = 0.07 + Math.sin(elapsed * 2 + t * 10) * 0.02
     }
 
-    this.landscapeGroup.traverse((child) => {
-      if (child.name === 'boundaryBuoy' && child.userData.isBuoy) {
-        child.position.y = 0.1 + Math.sin(elapsed * 1.5 + child.position.x * 0.5) * 0.03
-      }
-      if (child.name === 'warningLight') {
-        child.material.emissiveIntensity = 0.3 + Math.sin(elapsed * 3) * 0.3
-      }
-      if (child.name && child.name.startsWith('circulationRing_')) {
-        child.rotation.z = elapsed * 1.5
-      }
-      if (child.name && child.name.startsWith('circulationArrow_')) {
-        const bounce = Math.sin(elapsed * 2) * 0.1
-        child.position.y = 0.3 + bounce
-      }
-      if (child.name === 'lifebuoyRing') {
-        child.rotation.z = Math.sin(elapsed * 0.8) * 0.1
-      }
-    })
+    for (const buoy of this._animatedBuoys) {
+      buoy.position.y = 0.1 + Math.sin(elapsed * 1.5 + buoy.position.x * 0.5) * 0.03
+    }
+
+    for (const light of this._warningLights) {
+      light.material.emissiveIntensity = 0.3 + Math.sin(elapsed * 3) * 0.3
+    }
+
+    for (const ring of this._circulationRings) {
+      ring.rotation.z = elapsed * 1.5
+    }
+
+    for (const arrow of this._circulationArrows) {
+      arrow.position.y = 0.3 + Math.sin(elapsed * 2) * 0.1
+    }
+
+    for (const ring of this._lifebuoyRings) {
+      ring.rotation.z = Math.sin(elapsed * 0.8) * 0.1
+    }
   }
 
   dispose() {

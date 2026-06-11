@@ -67,6 +67,12 @@ export class StallBuilder {
         emissive: 0x553300,
         emissiveIntensity: 0.3,
       }),
+      pot: new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.4, metalness: 0.8 }),
+      shelf: new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.7 }),
+      cart: new THREE.MeshStandardMaterial({ color: 0xcd853f, roughness: 0.6 }),
+      wheel: new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.5, metalness: 0.5 }),
+      grill: new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.3, metalness: 0.9 }),
+      food: new THREE.MeshStandardMaterial({ color: 0xd2691e, roughness: 0.6 }),
     }
   }
 
@@ -186,8 +192,7 @@ export class StallBuilder {
     }
 
     const potGeo = new THREE.CylinderGeometry(0.2, 0.15, 0.3, 8)
-    const potMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.4, metalness: 0.8 })
-    const pot = new THREE.Mesh(potGeo, potMat)
+    const pot = new THREE.Mesh(potGeo, this.materials.pot)
     pot.position.set(0.6, 1.05, -0.5)
     pot.castShadow = true
     group.add(pot)
@@ -203,9 +208,8 @@ export class StallBuilder {
 
   _addRetailItems(group) {
     const shelfGeo = new THREE.BoxGeometry(0.4, 0.5, 0.3)
-    const shelfMat = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.7 })
     for (let i = 0; i < 3; i++) {
-      const shelf = new THREE.Mesh(shelfGeo, shelfMat)
+      const shelf = new THREE.Mesh(shelfGeo, this.materials.shelf)
       shelf.position.set(-0.6 + i * 0.6, 1.15, -0.3)
       shelf.castShadow = true
       group.add(shelf)
@@ -224,14 +228,12 @@ export class StallBuilder {
 
   _addSnackCart(group) {
     const cartGeo = new THREE.BoxGeometry(1.5, 0.1, 0.9)
-    const cartMat = new THREE.MeshStandardMaterial({ color: 0xcd853f, roughness: 0.6 })
-    const cart = new THREE.Mesh(cartGeo, cartMat)
+    const cart = new THREE.Mesh(cartGeo, this.materials.cart)
     cart.position.set(0, 0.8, 0)
     cart.castShadow = true
     group.add(cart)
 
     const wheelGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.08, 8)
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.5, metalness: 0.5 })
     const wheelPositions = [
       [-0.6, 0.15, 0.45],
       [0.6, 0.15, 0.45],
@@ -239,22 +241,20 @@ export class StallBuilder {
       [0.6, 0.15, -0.45],
     ]
     for (const pos of wheelPositions) {
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat)
+      const wheel = new THREE.Mesh(wheelGeo, this.materials.wheel)
       wheel.position.set(pos[0], pos[1], pos[2])
       wheel.rotation.x = Math.PI / 2
       group.add(wheel)
     }
 
     const grillGeo = new THREE.BoxGeometry(0.8, 0.05, 0.5)
-    const grillMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.3, metalness: 0.9 })
-    const grill = new THREE.Mesh(grillGeo, grillMat)
+    const grill = new THREE.Mesh(grillGeo, this.materials.grill)
     grill.position.set(0, 0.85, -0.1)
     group.add(grill)
 
     const foodGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.15, 6)
-    const foodMat = new THREE.MeshStandardMaterial({ color: 0xd2691e, roughness: 0.6 })
     for (let i = 0; i < 3; i++) {
-      const food = new THREE.Mesh(foodGeo, foodMat)
+      const food = new THREE.Mesh(foodGeo, this.materials.food)
       food.position.set(-0.2 + i * 0.2, 0.95, -0.1)
       group.add(food)
     }
@@ -274,16 +274,7 @@ export class StallBuilder {
     group.add(hook)
   }
 
-  updateAnimation(elapsed) {
-    this.stallGroup.children.forEach((stall, i) => {
-      stall.children.forEach(child => {
-        if (child.geometry && child.geometry.type === 'SphereGeometry') {
-          if (child.material && child.material.opacity < 1) {
-            child.position.y += Math.sin(elapsed * 2 + i) * 0.001
-          }
-        }
-      })
-    })
+  updateAnimation() {
   }
 
   dispose() {
