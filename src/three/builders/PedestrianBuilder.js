@@ -318,16 +318,16 @@ export class PedestrianBuilder {
     pelvis.add(torso)
 
     const neckGroup = this._buildNeck(materials)
-    neckGroup.position.y = 0.55
+    neckGroup.position.y = 0.275
     torso.add(neckGroup)
 
     const headGroup = new THREE.Group()
-    headGroup.position.y = 0.18
+    headGroup.position.y = 0.1
     headGroup.name = 'headGroup'
     neckGroup.add(headGroup)
 
     const head = new THREE.Mesh(this._highGeo.head, materials.skin)
-    head.position.y = 0.08
+    head.position.y = 0.15
     head.name = 'head'
     head.castShadow = true
     headGroup.add(head)
@@ -335,7 +335,7 @@ export class PedestrianBuilder {
     this._buildFacialFeatures(headGroup, materials)
 
     const hair = new THREE.Mesh(this._highGeo.hair, materials.hair)
-    hair.position.y = 0.08
+    hair.position.y = 0.15
     hair.castShadow = true
     headGroup.add(hair)
 
@@ -399,26 +399,26 @@ export class PedestrianBuilder {
 
   _buildFacialFeatures(headGroup, materials) {
     const leftEye = new THREE.Mesh(this._highGeo.eye, materials.eye)
-    leftEye.position.set(-0.045, 0.05, 0.13)
+    leftEye.position.set(-0.045, 0.18, 0.12)
     headGroup.add(leftEye)
 
     const rightEye = new THREE.Mesh(this._highGeo.eye, materials.eye)
-    rightEye.position.set(0.045, 0.05, 0.13)
+    rightEye.position.set(0.045, 0.18, 0.12)
     headGroup.add(rightEye)
 
     const nose = new THREE.Mesh(this._highGeo.nose, materials.nose)
-    nose.position.set(0, -0.01, 0.145)
+    nose.position.set(0, 0.13, 0.145)
     nose.rotation.x = Math.PI / 2
     headGroup.add(nose)
 
     const mouth = new THREE.Mesh(this._highGeo.mouth, materials.mouth)
-    mouth.position.set(0, -0.07, 0.14)
+    mouth.position.set(0, 0.07, 0.14)
     headGroup.add(mouth)
   }
 
   _buildClothing(pelvis, torso, materials) {
     const collar = new THREE.Mesh(this._highGeo.collar, materials.collar)
-    collar.position.y = 0.52
+    collar.position.y = 0.26
     collar.rotation.x = Math.PI / 2
     collar.castShadow = true
     torso.add(collar)
@@ -430,7 +430,7 @@ export class PedestrianBuilder {
 
     for (let i = 0; i < 3; i++) {
       const button = new THREE.Mesh(this._highGeo.button, materials.button)
-      button.position.set(0, 0.37 - i * 0.12, 0.115)
+      button.position.set(0, 0.18 - i * 0.1, 0.115)
       button.rotation.x = Math.PI / 2
       button.castShadow = true
       torso.add(button)
@@ -493,7 +493,7 @@ export class PedestrianBuilder {
 
   _buildArmsAndHands(torso, materials) {
     const leftArm = new THREE.Group()
-    leftArm.position.set(-0.24, 0.42, 0)
+    leftArm.position.set(-0.22, 0.24, 0)
     leftArm.name = 'leftArm'
     torso.add(leftArm)
 
@@ -518,7 +518,7 @@ export class PedestrianBuilder {
     leftForearm.add(leftHand)
 
     const rightArm = new THREE.Group()
-    rightArm.position.set(0.24, 0.42, 0)
+    rightArm.position.set(0.22, 0.24, 0)
     rightArm.name = 'rightArm'
     torso.add(rightArm)
 
@@ -634,13 +634,13 @@ export class PedestrianBuilder {
     pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._mediumGeo.neck, materials.skin)
-    neck.position.y = 0.55
+    neck.position.y = 0.275
     neck.name = 'neck'
     neck.castShadow = true
     torso.add(neck)
 
     const head = new THREE.Mesh(this._mediumGeo.head, materials.skin)
-    head.position.y = 0.09
+    head.position.y = 0.12
     head.name = 'head'
     head.castShadow = true
     neck.add(head)
@@ -651,24 +651,24 @@ export class PedestrianBuilder {
     head.add(hair)
 
     const leftEye = new THREE.Mesh(this._mediumGeo.eye, materials.eye)
-    leftEye.position.set(-0.045, 0.05, 0.13)
+    leftEye.position.set(-0.045, 0.18, 0.12)
     head.add(leftEye)
 
     const rightEye = new THREE.Mesh(this._mediumGeo.eye, materials.eye)
-    rightEye.position.set(0.045, 0.05, 0.13)
+    rightEye.position.set(0.045, 0.18, 0.12)
     head.add(rightEye)
 
     const nose = new THREE.Mesh(this._mediumGeo.nose, materials.nose)
-    nose.position.set(0, -0.01, 0.145)
+    nose.position.set(0, 0.13, 0.145)
     nose.rotation.x = Math.PI / 2
     head.add(nose)
 
     const mouth = new THREE.Mesh(this._mediumGeo.mouth, materials.mouth)
-    mouth.position.set(0, -0.07, 0.14)
+    mouth.position.set(0, 0.07, 0.14)
     head.add(mouth)
 
     const collar = new THREE.Mesh(this._mediumGeo.collar, materials.collar)
-    collar.position.y = 0.52
+    collar.position.y = 0.26
     collar.rotation.x = Math.PI / 2
     collar.castShadow = true
     torso.add(collar)
@@ -680,7 +680,7 @@ export class PedestrianBuilder {
 
     for (let i = 0; i < 3; i++) {
       const button = new THREE.Mesh(this._mediumGeo.button, materials.button)
-      button.position.set(0, 0.37 - i * 0.12, 0.115)
+      button.position.set(0, 0.18 - i * 0.1, 0.115)
       button.rotation.x = Math.PI / 2
       button.castShadow = true
       torso.add(button)
@@ -719,7 +719,7 @@ export class PedestrianBuilder {
     rightLeg.add(rightFoot)
 
     const leftArm = new THREE.Group()
-    leftArm.position.set(-0.24, 0.42, 0)
+    leftArm.position.set(-0.22, 0.24, 0)
     leftArm.name = 'leftArm'
     torso.add(leftArm)
 
@@ -735,7 +735,7 @@ export class PedestrianBuilder {
     leftArm.add(leftHand)
 
     const rightArm = new THREE.Group()
-    rightArm.position.set(0.24, 0.42, 0)
+    rightArm.position.set(0.22, 0.24, 0)
     rightArm.name = 'rightArm'
     torso.add(rightArm)
 
@@ -768,13 +768,13 @@ export class PedestrianBuilder {
     pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._lowGeo.neck, materials.skin)
-    neck.position.y = 0.55
+    neck.position.y = 0.275
     neck.name = 'neck'
     neck.castShadow = true
     torso.add(neck)
 
     const head = new THREE.Mesh(this._lowGeo.head, materials.skin)
-    head.position.y = 0.09
+    head.position.y = 0.12
     head.name = 'head'
     head.castShadow = true
     neck.add(head)
@@ -817,7 +817,7 @@ export class PedestrianBuilder {
     rightLeg.add(rightFoot)
 
     const leftArm = new THREE.Group()
-    leftArm.position.set(-0.24, 0.42, 0)
+    leftArm.position.set(-0.22, 0.24, 0)
     leftArm.name = 'leftArm'
     torso.add(leftArm)
 
@@ -833,7 +833,7 @@ export class PedestrianBuilder {
     leftArm.add(leftHand)
 
     const rightArm = new THREE.Group()
-    rightArm.position.set(0.24, 0.42, 0)
+    rightArm.position.set(0.22, 0.24, 0)
     rightArm.name = 'rightArm'
     torso.add(rightArm)
 
@@ -995,7 +995,7 @@ export class PedestrianBuilder {
           ped.torso.rotation.x = torsoLean
         }
         if (ped.head) {
-          ped.head.position.y = 0.08 + headBob
+          ped.head.position.y = 0.15 + headBob
           ped.head.rotation.z = headTilt
           ped.head.rotation.x = -torsoLean * 0.5
         }
