@@ -137,6 +137,8 @@ export class BuildingBuilder {
       group
     )
 
+    this.floorBuilder.setFloorsVisible(id, false)
+
     const buildingData = {
       id,
       name,

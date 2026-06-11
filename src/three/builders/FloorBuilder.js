@@ -5,6 +5,9 @@ export class FloorBuilder {
     this.scene = scene
     this._floorGroups = new Map()
     this._materials = this._createMaterials()
+    this._tempMatrix = new THREE.Matrix4()
+    this._tempVector = new THREE.Vector3()
+    this._tempQuaternion = new THREE.Quaternion()
   }
 
   _createMaterials() {
@@ -13,11 +16,6 @@ export class FloorBuilder {
         color: 0xd4c5a9,
         roughness: 0.85,
         metalness: 0.05,
-      }),
-      floorSlabBottom: new THREE.MeshStandardMaterial({
-        color: 0xe8dcc8,
-        roughness: 0.9,
-        metalness: 0.02,
       }),
       stair: new THREE.MeshStandardMaterial({
         color: 0x8b7355,
@@ -39,12 +37,6 @@ export class FloorBuilder {
         color: 0xcccccc,
         roughness: 0.3,
         metalness: 0.8,
-      }),
-      floorLabel: new THREE.MeshStandardMaterial({
-        color: 0xffaa00,
-        emissive: 0xff8800,
-        emissiveIntensity: 0.3,
-        side: THREE.DoubleSide,
       }),
       corridor: new THREE.MeshStandardMaterial({
         color: 0xc4b89a,
@@ -82,9 +74,7 @@ export class FloorBuilder {
       this._addElevatorShaft(floorGroup, width, depth, floors, floorHeight, slabThickness, floorConfig.elevatorPosition)
     }
 
-    if (floorConfig.showLabels) {
-      this._addFloorLabels(floorGroup, width, depth, floors, floorHeight)
-    }
+    this._addFloorLabels(floorGroup, width, depth, floors, floorHeight, floorConfig.showLabels)
 
     buildingGroup.add(floorGroup)
     this._floorGroups.set(id, floorGroup)
@@ -149,18 +139,22 @@ export class FloorBuilder {
     const slabGroup = new THREE.Group()
     slabGroup.name = 'floorSlabs'
 
+    const slabCount = floorCount + 1
     const slabGeo = new THREE.BoxGeometry(width - 0.1, slabThickness, depth - 0.1)
+    const slabInstanced = new THREE.InstancedMesh(slabGeo, this._materials.floorSlab, slabCount)
+    slabInstanced.name = 'slabs_instanced'
+    slabInstanced.receiveShadow = true
+    slabInstanced.castShadow = false
 
-    for (let i = 0; i <= floorCount; i++) {
+    for (let i = 0; i < slabCount; i++) {
       const y = i * floorHeight
-      const slab = new THREE.Mesh(slabGeo, this._materials.floorSlab)
-      slab.position.y = y
-      slab.receiveShadow = true
-      slab.castShadow = i > 0
-      slab.userData = { floorIndex: i, isSlab: true }
-      slab.name = `slab_${i}`
-      slabGroup.add(slab)
+      this._tempVector.set(0, y, 0)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      slabInstanced.setMatrixAt(i, this._tempMatrix)
+      slabInstanced.setColorAt(i, new THREE.Color(0xd4c5a9))
     }
+    slabInstanced.instanceMatrix.needsUpdate = true
+    slabGroup.add(slabInstanced)
 
     if (buildingType === 'commercial' || buildingType === 'retail') {
       this._addCorridors(slabGroup, width, depth, floorCount, floorHeight)
@@ -170,18 +164,25 @@ export class FloorBuilder {
   }
 
   _addCorridors(slabGroup, width, depth, floorCount, floorHeight) {
+    const corridorCount = Math.max(0, floorCount - 1)
+    if (corridorCount === 0) return
+
     const corridorWidth = 1.5
     const corridorGeo = new THREE.BoxGeometry(width - 0.5, 0.02, corridorWidth)
+    const corridorInstanced = new THREE.InstancedMesh(corridorGeo, this._materials.corridor, corridorCount)
+    corridorInstanced.name = 'corridors_instanced'
+    corridorInstanced.receiveShadow = true
 
+    let idx = 0
     for (let i = 1; i < floorCount; i++) {
       const y = i * floorHeight + 0.08
-
-      const corridor = new THREE.Mesh(corridorGeo, this._materials.corridor)
-      corridor.position.set(0, y, 0)
-      corridor.receiveShadow = true
-      corridor.name = `corridor_${i}`
-      slabGroup.add(corridor)
+      this._tempVector.set(0, y, 0)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      corridorInstanced.setMatrixAt(idx, this._tempMatrix)
+      idx++
     }
+    corridorInstanced.instanceMatrix.needsUpdate = true
+    slabGroup.add(corridorInstanced)
   }
 
   _addStructuralColumns(group, width, depth, floorCount, floorHeight, buildingType) {
@@ -210,14 +211,21 @@ export class FloorBuilder {
       columnPositions.push([hw, 0])
     }
 
-    for (const [x, z] of columnPositions) {
-      const column = new THREE.Mesh(columnGeo, this._materials.column)
-      column.position.set(x, (floorHeight * floorCount) / 2, z)
-      column.castShadow = true
-      column.receiveShadow = true
-      column.name = 'column'
-      columnGroup.add(column)
+    const columnCount = columnPositions.length
+    const columnInstanced = new THREE.InstancedMesh(columnGeo, this._materials.column, columnCount)
+    columnInstanced.name = 'columns_instanced'
+    columnInstanced.castShadow = true
+    columnInstanced.receiveShadow = true
+
+    const centerY = (floorHeight * floorCount) / 2
+    for (let i = 0; i < columnCount; i++) {
+      const [x, z] = columnPositions[i]
+      this._tempVector.set(x, centerY, z)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      columnInstanced.setMatrixAt(i, this._tempMatrix)
     }
+    columnInstanced.instanceMatrix.needsUpdate = true
+    columnGroup.add(columnInstanced)
 
     group.add(columnGroup)
   }
@@ -233,152 +241,159 @@ export class FloorBuilder {
 
     const stepsPerFloor = Math.floor(floorHeight / riserHeight)
     const actualRiserHeight = floorHeight / stepsPerFloor
+    const halfSteps = Math.floor(stepsPerFloor / 2)
 
     const stairwellWidth = stairWidth + 0.3
     const stairwellDepth = stairDepth * 2 + 0.5
+    const totalHeight = floorCount * floorHeight
 
-    const stairwellGeo = new THREE.BoxGeometry(stairwellWidth, floorHeight * floorCount, stairwellDepth)
+    const stairwellGeo = new THREE.BoxGeometry(stairwellWidth, totalHeight, stairwellDepth)
     const stairwell = new THREE.Mesh(stairwellGeo, this._materials.elevatorShaft)
-    stairwell.position.set(position.x, (floorHeight * floorCount) / 2, position.z)
+    stairwell.position.set(position.x, totalHeight / 2, position.z)
     stairwell.name = 'stairwell'
     stairGroup.add(stairwell)
 
     const landingGeo = new THREE.BoxGeometry(stairWidth + 0.2, slabThickness, stairDepth + 0.2)
+    const landingCount = floorCount * 3
+    const landingInstanced = new THREE.InstancedMesh(landingGeo, this._materials.stair, landingCount)
+    landingInstanced.name = 'landings_instanced'
+    landingInstanced.receiveShadow = true
+    landingInstanced.castShadow = true
 
+    let landingIdx = 0
     for (let floor = 0; floor < floorCount; floor++) {
       const baseY = floor * floorHeight
 
-      const landingBottom = new THREE.Mesh(landingGeo, this._materials.stair)
-      landingBottom.position.set(position.x, baseY, position.z)
-      landingBottom.receiveShadow = true
-      landingBottom.castShadow = true
-      landingBottom.name = `landing_bottom_${floor}`
-      stairGroup.add(landingBottom)
+      this._tempVector.set(position.x, baseY, position.z)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      landingInstanced.setMatrixAt(landingIdx++, this._tempMatrix)
 
-      this._buildStairFlight(
-        stairGroup,
+      const midY = baseY + floorHeight / 2
+      this._tempVector.set(position.x, midY, position.z)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      landingInstanced.setMatrixAt(landingIdx++, this._tempMatrix)
+
+      const topY = baseY + floorHeight
+      this._tempVector.set(position.x, topY, position.z)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      landingInstanced.setMatrixAt(landingIdx++, this._tempMatrix)
+    }
+    landingInstanced.instanceMatrix.needsUpdate = true
+    stairGroup.add(landingInstanced)
+
+    const riserGeo = new THREE.BoxGeometry(stairWidth, actualRiserHeight, 0.02)
+    const treadGeo = new THREE.BoxGeometry(stairWidth, 0.02, treadDepth)
+
+    const totalRiserCount = floorCount * halfSteps * 2
+    const riserInstanced = new THREE.InstancedMesh(riserGeo, this._materials.stair, totalRiserCount)
+    riserInstanced.name = 'risers_instanced'
+    riserInstanced.castShadow = true
+
+    const treadInstanced = new THREE.InstancedMesh(treadGeo, this._materials.stair, totalRiserCount)
+    treadInstanced.name = 'treads_instanced'
+    treadInstanced.receiveShadow = true
+    treadInstanced.castShadow = true
+
+    let stepIdx = 0
+    for (let floor = 0; floor < floorCount; floor++) {
+      const baseY = floor * floorHeight
+
+      this._populateStairFlight(
+        riserInstanced,
+        treadInstanced,
+        stepIdx,
         position.x,
         baseY,
         position.z - stairDepth / 2 + treadDepth / 2,
-        stairWidth,
-        treadDepth,
         actualRiserHeight,
-        stepsPerFloor / 2,
-        true,
-        floor
+        treadDepth,
+        halfSteps,
+        1
       )
+      stepIdx += halfSteps
 
-      const midLandingY = baseY + floorHeight / 2
-      const midLanding = new THREE.Mesh(landingGeo, this._materials.stair)
-      midLanding.position.set(position.x, midLandingY, position.z)
-      midLanding.receiveShadow = true
-      midLanding.castShadow = true
-      midLanding.name = `landing_mid_${floor}`
-      stairGroup.add(midLanding)
-
-      this._buildStairFlight(
-        stairGroup,
+      this._populateStairFlight(
+        riserInstanced,
+        treadInstanced,
+        stepIdx,
         position.x,
-        midLandingY,
+        baseY + floorHeight / 2,
         position.z + stairDepth / 2 - treadDepth / 2,
-        stairWidth,
-        treadDepth,
         actualRiserHeight,
-        stepsPerFloor / 2,
-        false,
-        floor
+        treadDepth,
+        halfSteps,
+        -1
       )
-
-      const landingTop = new THREE.Mesh(landingGeo, this._materials.stair)
-      landingTop.position.set(position.x, baseY + floorHeight, position.z)
-      landingTop.receiveShadow = true
-      landingTop.castShadow = true
-      landingTop.name = `landing_top_${floor}`
-      stairGroup.add(landingTop)
+      stepIdx += halfSteps
     }
+    riserInstanced.instanceMatrix.needsUpdate = true
+    treadInstanced.instanceMatrix.needsUpdate = true
+    stairGroup.add(riserInstanced)
+    stairGroup.add(treadInstanced)
 
     this._addStairHandrails(stairGroup, position, floorCount, floorHeight, stairDepth, stairWidth)
 
     group.add(stairGroup)
   }
 
-  _buildStairFlight(group, x, startY, startZ, width, treadDepth, riserHeight, stepCount, ascending, floorIndex) {
-    const direction = ascending ? 1 : -1
-
+  _populateStairFlight(riserInstanced, treadInstanced, startIdx, x, startY, startZ, riserHeight, treadDepth, stepCount, direction) {
     for (let i = 0; i < stepCount; i++) {
       const stepY = startY + i * riserHeight
       const stepZ = startZ + direction * i * treadDepth
 
-      const riserGeo = new THREE.BoxGeometry(width, riserHeight, 0.02)
-      const riser = new THREE.Mesh(riserGeo, this._materials.stair)
-      riser.position.set(x, stepY + riserHeight / 2, stepZ + direction * (treadDepth / 2 - 0.01))
-      riser.castShadow = true
-      riser.name = `riser_${floorIndex}_${i}`
-      group.add(riser)
+      this._tempVector.set(x, stepY + riserHeight / 2, stepZ + direction * (treadDepth / 2 - 0.01))
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      riserInstanced.setMatrixAt(startIdx + i, this._tempMatrix)
 
-      const treadGeo = new THREE.BoxGeometry(width, 0.02, treadDepth)
-      const tread = new THREE.Mesh(treadGeo, this._materials.stair)
-      tread.position.set(x, stepY + riserHeight - 0.01, stepZ + direction * treadDepth / 2)
-      tread.receiveShadow = true
-      tread.castShadow = true
-      tread.name = `tread_${floorIndex}_${i}`
-      group.add(tread)
+      this._tempVector.set(x, stepY + riserHeight - 0.01, stepZ + direction * treadDepth / 2)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      treadInstanced.setMatrixAt(startIdx + i, this._tempMatrix)
     }
   }
 
   _addStairHandrails(group, position, floorCount, floorHeight, stairDepth, stairWidth) {
     const handrailHeight = 0.9
     const handrailRadius = 0.03
-    const postRadius = 0.02
-
     const totalHeight = floorCount * floorHeight
 
-    const outerHandrailGeo = new THREE.CylinderGeometry(handrailRadius, handrailRadius, totalHeight, 8)
-    const innerHandrailGeo = new THREE.CylinderGeometry(handrailRadius, handrailRadius, totalHeight, 8)
+    const handrailGeo = new THREE.CylinderGeometry(handrailRadius, handrailRadius, totalHeight, 8)
+
+    const handrailInstanced = new THREE.InstancedMesh(handrailGeo, this._materials.stairHandrail, 2)
+    handrailInstanced.name = 'handrails_instanced'
 
     const handrailOffset = stairWidth / 2 + 0.05
 
-    const outerHandrail = new THREE.Mesh(outerHandrailGeo, this._materials.stairHandrail)
-    outerHandrail.position.set(
-      position.x + handrailOffset,
-      totalHeight / 2 + handrailHeight,
-      position.z
-    )
-    outerHandrail.name = 'handrail_outer'
-    group.add(outerHandrail)
+    this._tempVector.set(position.x + handrailOffset, totalHeight / 2 + handrailHeight, position.z)
+    this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+    handrailInstanced.setMatrixAt(0, this._tempMatrix)
 
-    const innerHandrail = new THREE.Mesh(innerHandrailGeo, this._materials.stairHandrail)
-    innerHandrail.position.set(
-      position.x - handrailOffset,
-      totalHeight / 2 + handrailHeight,
-      position.z
-    )
-    innerHandrail.name = 'handrail_inner'
-    group.add(innerHandrail)
+    this._tempVector.set(position.x - handrailOffset, totalHeight / 2 + handrailHeight, position.z)
+    this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+    handrailInstanced.setMatrixAt(1, this._tempMatrix)
 
-    const postCount = floorCount * 4
-    for (let i = 0; i <= postCount; i++) {
+    handrailInstanced.instanceMatrix.needsUpdate = true
+    group.add(handrailInstanced)
+
+    const postCount = Math.min(floorCount * 2, 8)
+    const postRadius = 0.02
+    const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, handrailHeight, 6)
+    const postInstanced = new THREE.InstancedMesh(postGeo, this._materials.stairHandrail, postCount * 2)
+    postInstanced.name = 'handrail_posts_instanced'
+
+    let postIdx = 0
+    for (let i = 0; i < postCount; i++) {
       const postY = (i / postCount) * totalHeight
-      const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, handrailHeight, 6)
 
-      const postOuter = new THREE.Mesh(postGeo, this._materials.stairHandrail)
-      postOuter.position.set(
-        position.x + handrailOffset,
-        postY + handrailHeight / 2,
-        position.z
-      )
-      postOuter.name = `handrail_post_outer_${i}`
-      group.add(postOuter)
+      this._tempVector.set(position.x + handrailOffset, postY + handrailHeight / 2, position.z)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      postInstanced.setMatrixAt(postIdx++, this._tempMatrix)
 
-      const postInner = new THREE.Mesh(postGeo, this._materials.stairHandrail)
-      postInner.position.set(
-        position.x - handrailOffset,
-        postY + handrailHeight / 2,
-        position.z
-      )
-      postInner.name = `handrail_post_inner_${i}`
-      group.add(postInner)
+      this._tempVector.set(position.x - handrailOffset, postY + handrailHeight / 2, position.z)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      postInstanced.setMatrixAt(postIdx++, this._tempMatrix)
     }
+    postInstanced.instanceMatrix.needsUpdate = true
+    group.add(postInstanced)
   }
 
   _addElevatorShaft(group, width, depth, floorCount, floorHeight, slabThickness, position) {
@@ -388,68 +403,74 @@ export class FloorBuilder {
     const shaftWidth = 2.0
     const shaftDepth = 2.5
     const totalHeight = floorCount * floorHeight
-
     const shaftWallThickness = 0.15
 
+    const shaftWallMat = this._materials.elevatorShaft
+
     const backWallGeo = new THREE.BoxGeometry(shaftWidth, totalHeight, shaftWallThickness)
-    const backWall = new THREE.Mesh(backWallGeo, this._materials.elevatorShaft)
+    const backWall = new THREE.Mesh(backWallGeo, shaftWallMat)
     backWall.position.set(position.x, totalHeight / 2, position.z - shaftDepth / 2 + shaftWallThickness / 2)
     backWall.name = 'shaft_back_wall'
     elevatorGroup.add(backWall)
 
     const frontWallGeo = new THREE.BoxGeometry(shaftWidth, totalHeight, shaftWallThickness)
-    const frontWall = new THREE.Mesh(frontWallGeo, this._materials.elevatorShaft)
+    const frontWall = new THREE.Mesh(frontWallGeo, shaftWallMat)
     frontWall.position.set(position.x, totalHeight / 2, position.z + shaftDepth / 2 - shaftWallThickness / 2)
     frontWall.name = 'shaft_front_wall'
     elevatorGroup.add(frontWall)
 
     const sideWallGeo = new THREE.BoxGeometry(shaftWallThickness, totalHeight, shaftDepth)
-    const leftWall = new THREE.Mesh(sideWallGeo, this._materials.elevatorShaft)
+    const leftWall = new THREE.Mesh(sideWallGeo, shaftWallMat)
     leftWall.position.set(position.x - shaftWidth / 2 + shaftWallThickness / 2, totalHeight / 2, position.z)
     leftWall.name = 'shaft_left_wall'
     elevatorGroup.add(leftWall)
 
-    const rightWall = new THREE.Mesh(sideWallGeo, this._materials.elevatorShaft)
+    const rightWall = new THREE.Mesh(sideWallGeo, shaftWallMat)
     rightWall.position.set(position.x + shaftWidth / 2 - shaftWallThickness / 2, totalHeight / 2, position.z)
     rightWall.name = 'shaft_right_wall'
     elevatorGroup.add(rightWall)
 
     const doorWidth = shaftWidth * 0.7
     const doorHeight = 2.2
+    const halfDoorWidth = doorWidth / 2 - 0.02
+
+    const leftDoorGeo = new THREE.BoxGeometry(halfDoorWidth, doorHeight, 0.08)
+    const rightDoorGeo = new THREE.BoxGeometry(halfDoorWidth, doorHeight, 0.08)
+    const frameGeo = new THREE.BoxGeometry(doorWidth + 0.1, doorHeight + 0.1, 0.05)
+
+    const leftDoorInstanced = new THREE.InstancedMesh(leftDoorGeo, this._materials.elevatorDoor, floorCount)
+    leftDoorInstanced.name = 'elevator_doors_left_instanced'
+
+    const rightDoorInstanced = new THREE.InstancedMesh(rightDoorGeo, this._materials.elevatorDoor, floorCount)
+    rightDoorInstanced.name = 'elevator_doors_right_instanced'
+
+    const frameInstanced = new THREE.InstancedMesh(frameGeo, this._materials.stairHandrail, floorCount)
+    frameInstanced.name = 'elevator_doors_frame_instanced'
+
+    const doorZ = position.z + shaftDepth / 2 - shaftWallThickness
+    const frameZ = position.z + shaftDepth / 2 - shaftWallThickness / 2 - 0.01
 
     for (let i = 0; i < floorCount; i++) {
       const doorY = i * floorHeight + doorHeight / 2
 
-      const leftDoorGeo = new THREE.BoxGeometry(doorWidth / 2 - 0.02, doorHeight, 0.08)
-      const leftDoor = new THREE.Mesh(leftDoorGeo, this._materials.elevatorDoor)
-      leftDoor.position.set(
-        position.x - doorWidth / 4,
-        doorY,
-        position.z + shaftDepth / 2 - shaftWallThickness
-      )
-      leftDoor.name = `elevator_door_left_${i}`
-      elevatorGroup.add(leftDoor)
+      this._tempVector.set(position.x - doorWidth / 4, doorY, doorZ)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      leftDoorInstanced.setMatrixAt(i, this._tempMatrix)
 
-      const rightDoorGeo = new THREE.BoxGeometry(doorWidth / 2 - 0.02, doorHeight, 0.08)
-      const rightDoor = new THREE.Mesh(rightDoorGeo, this._materials.elevatorDoor)
-      rightDoor.position.set(
-        position.x + doorWidth / 4,
-        doorY,
-        position.z + shaftDepth / 2 - shaftWallThickness
-      )
-      rightDoor.name = `elevator_door_right_${i}`
-      elevatorGroup.add(rightDoor)
+      this._tempVector.set(position.x + doorWidth / 4, doorY, doorZ)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      rightDoorInstanced.setMatrixAt(i, this._tempMatrix)
 
-      const doorFrameGeo = new THREE.BoxGeometry(doorWidth + 0.1, doorHeight + 0.1, 0.05)
-      const doorFrame = new THREE.Mesh(doorFrameGeo, this._materials.stairHandrail)
-      doorFrame.position.set(
-        position.x,
-        doorY,
-        position.z + shaftDepth / 2 - shaftWallThickness / 2 - 0.01
-      )
-      doorFrame.name = `elevator_door_frame_${i}`
-      elevatorGroup.add(doorFrame)
+      this._tempVector.set(position.x, doorY, frameZ)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      frameInstanced.setMatrixAt(i, this._tempMatrix)
     }
+    leftDoorInstanced.instanceMatrix.needsUpdate = true
+    rightDoorInstanced.instanceMatrix.needsUpdate = true
+    frameInstanced.instanceMatrix.needsUpdate = true
+    elevatorGroup.add(leftDoorInstanced)
+    elevatorGroup.add(rightDoorInstanced)
+    elevatorGroup.add(frameInstanced)
 
     const carHeight = 2.0
     const carGeo = new THREE.BoxGeometry(shaftWidth - 0.3, carHeight, shaftDepth - 0.3)
@@ -471,44 +492,51 @@ export class FloorBuilder {
     }
     elevatorGroup.add(elevatorCar)
 
-    const cableGeo = new THREE.CylinderGeometry(0.015, 0.015, totalHeight, 4)
+    const cableCount = 2
+    const cableGeo = new THREE.CylinderGeometry(0.02, 0.02, totalHeight, 4)
     const cableMat = new THREE.MeshStandardMaterial({
       color: 0x555555,
       roughness: 0.6,
       metalness: 0.7,
     })
+    const cableInstanced = new THREE.InstancedMesh(cableGeo, cableMat, cableCount)
+    cableInstanced.name = 'elevator_cables_instanced'
 
     const cablePositions = [
-      [-shaftWidth / 3, 0],
-      [shaftWidth / 3, 0],
-      [0, -shaftDepth / 3],
-      [0, shaftDepth / 3],
+      [-shaftWidth / 4, 0],
+      [shaftWidth / 4, 0],
     ]
-
-    for (let i = 0; i < cablePositions.length; i++) {
+    for (let i = 0; i < cableCount; i++) {
       const [cx, cz] = cablePositions[i]
-      const cable = new THREE.Mesh(cableGeo, cableMat)
-      cable.position.set(position.x + cx, totalHeight / 2, position.z + cz)
-      cable.name = `elevator_cable_${i}`
-      elevatorGroup.add(cable)
+      this._tempVector.set(position.x + cx, totalHeight / 2, position.z + cz)
+      this._tempMatrix.compose(this._tempVector, this._tempQuaternion, new THREE.Vector3(1, 1, 1))
+      cableInstanced.setMatrixAt(i, this._tempMatrix)
     }
+    cableInstanced.instanceMatrix.needsUpdate = true
+    elevatorGroup.add(cableInstanced)
 
     group.add(elevatorGroup)
   }
 
-  _addFloorLabels(group, width, depth, floorCount, floorHeight) {
+  _addFloorLabels(group, width, depth, floorCount, floorHeight, showLabels) {
     const labelGroup = new THREE.Group()
     labelGroup.name = 'floorLabels'
 
-    const canvas = document.createElement('canvas')
-    canvas.width = 128
-    canvas.height = 64
-    const ctx = canvas.getContext('2d')
+    if (!showLabels || floorCount === 0) {
+      group.add(labelGroup)
+      return
+    }
+
+    const labelGeo = new THREE.PlaneGeometry(1.2, 0.6)
 
     for (let i = 0; i < floorCount; i++) {
       const y = i * floorHeight + floorHeight / 2
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const canvas = document.createElement('canvas')
+      canvas.width = 128
+      canvas.height = 64
+      const ctx = canvas.getContext('2d')
+
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -529,14 +557,12 @@ export class FloorBuilder {
         side: THREE.DoubleSide,
       })
 
-      const labelGeo = new THREE.PlaneGeometry(1.2, 0.6)
-
-      const labelFront = new THREE.Mesh(labelGeo, labelMat.clone())
+      const labelFront = new THREE.Mesh(labelGeo, labelMat)
       labelFront.position.set(0, y, depth / 2 - 0.05)
       labelFront.name = `floor_label_front_${i}`
       labelGroup.add(labelFront)
 
-      const labelBack = new THREE.Mesh(labelGeo, labelMat.clone())
+      const labelBack = new THREE.Mesh(labelGeo, labelMat)
       labelBack.position.set(0, y, -depth / 2 + 0.05)
       labelBack.rotation.y = Math.PI
       labelBack.name = `floor_label_back_${i}`
@@ -573,11 +599,13 @@ export class FloorBuilder {
     if (!floorGroup) return null
 
     const buildingGroup = floorGroup.parent
+    const floors = buildingGroup.userData.floors
+    const floorHeight = buildingGroup.userData.floorHeight || 3.5
     return {
       buildingId,
-      floorCount: buildingGroup.userData.floors,
-      floorHeight: 3.5,
-      totalHeight: buildingGroup.userData.floors * 3.5,
+      floorCount: floors,
+      floorHeight,
+      totalHeight: floors * floorHeight,
       hasStairs: floorGroup.getObjectByName('staircase') !== null,
       hasElevator: floorGroup.getObjectByName('elevatorShaft') !== null,
     }
