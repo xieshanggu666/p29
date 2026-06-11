@@ -844,6 +844,80 @@
 
 ---
 
+### 2026-06-11 人物模型连接修复 & 行人-车辆碰撞检测 & 行走动画优化
+
+#### Bug 1：人物颈部与身体分离
+
+- **问题表现**：人物颈部和躯干之间有明显空隙，颈部像是浮在空中
+- **根因分析**：
+  1. `torso.position.y = 0.28`（相对 pelvis），torso 是 BoxGeometry(0.38, 0.55, 0.22)，半高 0.275，顶部 = 0.28+0.275 = 0.555
+  2. `neckGroup.position.y = 0.58`（相对 torso），比 torso 顶部高 0.025，导致空隙
+  3. torso 顶部变形后收缩 5%，实际视觉顶部更低，空隙更大
+- **修复方案**（`PedestrianBuilder.js`）：
+  1. torso.position.y 从 0.28 调整为 0.275，使其底部刚好在 pelvis 上方
+  2. neckGroup.position.y 从 0.58 调整为 0.55，紧贴 torso 顶部（0.275 + 0.275 = 0.55）
+  3. 中/低细节模型的 neck.position.y 同步从 0.62 调整为 0.55，head.position.y 从 0.24 调整为 0.09
+  4. collar.position.y 从 0.54 调整为 0.52，确保衣领在颈部底部
+  5. 动画基准值 torso.position.y 从 0.28 调整为 0.275
+
+#### Bug 2：人物经过车辆时动画停止
+
+- **问题表现**：行人走到车辆附近时动画完全停止，要等车辆走远才恢复
+- **根因分析**：
+  1. CarBuilder._checkCarDistances 只检测车间距，不涉及行人
+  2. VehicleBuilder.updateAnimation 先调用行人再调用车辆，行人没有碰撞避让机制
+  3. 没有行人-车辆距离检测逻辑，行人不知道附近有车
+- **修复方案**（`VehicleBuilder.js`）：
+  1. 新增 `_checkPedestrianCarDistances()` 方法，在每帧 `updateAnimation` 后调用
+  2. 计算每个行人与所有车辆的最小距离
+  3. 距离 < 2.5m（PED_CAR_MIN_DIST）：行人完全停止移动（waitSpeedFactor = 0）
+  4. 距离 2.5-5.0m（PED_CAR_SLOW_DIST）：行人减速移动（waitSpeedFactor 按距离线性恢复）
+  5. 距离 > 5.0m：正常行走（waitSpeedFactor = 1）
+- **行人等待状态表现**（`PedestrianBuilder.js`）：
+  1. waitSpeedFactor = 0 时，行人不会完全冻结，而是播放"等待"微动画
+  2. 头部左右微转（lookAtCar），模拟观察车辆
+  3. 躯干轻微晃动（waitShift），模拟重心转移
+  4. walkPhase 仍然缓慢递增（animSpeedFactor = max(speedFactor, 0.15)），避免恢复时动画跳变
+
+#### Bug 3：人物穿过车辆
+
+- **问题表现**：行人直接穿过车辆，没有任何碰撞反应
+- **根因分析**：行人路径是预定义的 CatmullRomCurve3，progress 沿路径线性推进，不考虑其他物体
+- **修复方案**：
+  1. 利用 Bug 2 的 waitSpeedFactor 机制，行人在车辆 2.5m 内停止移动
+  2. 行人不再推进 progress，因此不会穿过车辆
+  3. 车辆驶离后，waitSpeedFactor 恢复为 1，行人继续行走
+
+#### Bug 4：人物存在平移现象
+
+- **问题表现**：行人行走时身体像"滑行"，四肢虽有摆动但整体缺乏行走节奏感
+- **根因分析**：
+  1. 步态动画幅度偏小（腿摆 0.5 rad、膝弯 0.3 rad、臂摆 0.4 rad）
+  2. 膝盖弯曲逻辑用 `Math.sign(legSwing)` 判断，容易产生不自然的跳变
+  3. 肘关节弯曲与臂摆不协调（固定 elbowBend + 0.1）
+  4. 缺少躯干前倾动作，行走的推进感不足
+  5. 脚部抬起高度不够（0.08），步幅感不强
+- **修复方案**（`PedestrianBuilder.js` 动画参数优化）：
+  1. **增大步态幅度**：腿摆 0.5→0.6、臂摆 0.4→0.5、膝弯 0.3→0.4、肘弯 0.25→0.3
+  2. **重写膝盖弯曲逻辑**：
+     - 左膝：`Math.max(0, Math.sin(walkPhase + 0.5)) * 0.5`（腿向前时膝盖弯曲）
+     - 右膝：`Math.max(0, Math.sin(walkPhase - 0.5 + PI)) * 0.5`（与左腿反相）
+     - 移除了 Math.sign 跳变，弯曲过渡平滑
+  3. **重写肘关节弯曲逻辑**：
+     - 左肘：`Math.max(0, Math.sin(walkPhase + PI + 0.3)) * 0.6 + 0.15`（与左臂摆协调）
+     - 右肘：`Math.max(0, Math.sin(walkPhase + 0.3)) * 0.6 + 0.15`（与右臂摆协调）
+  4. **新增躯干前倾**：`torsoLean = Math.sin(walkPhase) * 0.03`，模拟行走推进
+  5. **增强身体起伏**：bodyBob 0.03→0.04，headBob 0.015→0.02
+  6. **增强脚部抬起**：footLift 0.08→0.12，步幅感更强
+  7. **头部反向微倾**：head.rotation.x = -torsoLean * 0.5，保持视线水平
+
+#### 修改文件清单
+1. `src/three/builders/PedestrianBuilder.js` - 颈部位置修复、等待动画、步态增强
+2. `src/three/builders/VehicleBuilder.js` - 新增行人-车辆碰撞检测
+3. `PROJECT.mind` - 添加本次修改记录
+
+---
+
 ### 后续修改记录规范
 
 > **所有后续对 3D 模型、动画、材质、配置等的修改，均需按以下结构追加记录到本文件**

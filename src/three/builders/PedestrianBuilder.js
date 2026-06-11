@@ -114,6 +114,8 @@ export class PedestrianBuilder {
       highDetail,
       mediumDetail,
       lowDetail,
+      isWaitingForCar: false,
+      waitSpeedFactor: 1,
     }
 
     this.pedestrians.push(pedData)
@@ -310,13 +312,13 @@ export class PedestrianBuilder {
     group.add(pelvis)
 
     const torso = new THREE.Mesh(this._highGeo.torso, materials.body)
-    torso.position.y = 0.28
+    torso.position.y = 0.275
     torso.name = 'torso'
     torso.castShadow = true
     pelvis.add(torso)
 
     const neckGroup = this._buildNeck(materials)
-    neckGroup.position.y = 0.58
+    neckGroup.position.y = 0.55
     torso.add(neckGroup)
 
     const headGroup = new THREE.Group()
@@ -416,7 +418,7 @@ export class PedestrianBuilder {
 
   _buildClothing(pelvis, torso, materials) {
     const collar = new THREE.Mesh(this._highGeo.collar, materials.collar)
-    collar.position.y = 0.54
+    collar.position.y = 0.52
     collar.rotation.x = Math.PI / 2
     collar.castShadow = true
     torso.add(collar)
@@ -626,19 +628,19 @@ export class PedestrianBuilder {
     group.add(pelvis)
 
     const torso = new THREE.Mesh(this._mediumGeo.torso, materials.body)
-    torso.position.y = 0.28
+    torso.position.y = 0.275
     torso.name = 'torso'
     torso.castShadow = true
     pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._mediumGeo.neck, materials.skin)
-    neck.position.y = 0.62
+    neck.position.y = 0.55
     neck.name = 'neck'
     neck.castShadow = true
     torso.add(neck)
 
     const head = new THREE.Mesh(this._mediumGeo.head, materials.skin)
-    head.position.y = 0.24
+    head.position.y = 0.09
     head.name = 'head'
     head.castShadow = true
     neck.add(head)
@@ -666,7 +668,7 @@ export class PedestrianBuilder {
     head.add(mouth)
 
     const collar = new THREE.Mesh(this._mediumGeo.collar, materials.collar)
-    collar.position.y = 0.54
+    collar.position.y = 0.52
     collar.rotation.x = Math.PI / 2
     collar.castShadow = true
     torso.add(collar)
@@ -760,19 +762,19 @@ export class PedestrianBuilder {
     group.add(pelvis)
 
     const torso = new THREE.Mesh(this._lowGeo.torso, materials.body.clone())
-    torso.position.y = 0.28
+    torso.position.y = 0.275
     torso.name = 'torso'
     torso.castShadow = true
     pelvis.add(torso)
 
     const neck = new THREE.Mesh(this._lowGeo.neck, materials.skin)
-    neck.position.y = 0.62
+    neck.position.y = 0.55
     neck.name = 'neck'
     neck.castShadow = true
     torso.add(neck)
 
     const head = new THREE.Mesh(this._lowGeo.head, materials.skin)
-    head.position.y = 0.24
+    head.position.y = 0.09
     head.name = 'head'
     head.castShadow = true
     neck.add(head)
@@ -879,7 +881,8 @@ export class PedestrianBuilder {
       }
 
       if (!ped.isIdle) {
-        ped.progress += clampedDelta * ped.speed * 0.03 * ped.direction
+        const speedFactor = ped.waitSpeedFactor !== undefined ? ped.waitSpeedFactor : 1
+        ped.progress += clampedDelta * ped.speed * 0.03 * ped.direction * speedFactor
 
         if (ped.closed) {
           if (ped.progress >= 1) ped.progress -= 1
@@ -905,25 +908,44 @@ export class PedestrianBuilder {
       ped.boundingSphere.center.copy(ped.group.position).y += 0.9
 
       if (!ped.isIdle) {
-        const targetAngle = ped.direction === 1
-          ? Math.atan2(tangent.x, tangent.z)
-          : Math.atan2(tangent.x, tangent.z) + Math.PI
-        ped.group.rotation.y = this._lerpAngle(ped.group.rotation.y, targetAngle, Math.min(1, clampedDelta * 8))
+        const speedFactor = ped.waitSpeedFactor !== undefined ? ped.waitSpeedFactor : 1
+        const animSpeedFactor = Math.max(speedFactor, 0.15)
+        const isWaiting = speedFactor < 0.3
 
-        ped.walkPhase += clampedDelta * ped.speed * 8
-        ped.bobPhase += clampedDelta * ped.speed * 8
-        ped.headBobPhase += clampedDelta * ped.speed * 6
-        ped.handPhase += clampedDelta * ped.speed * 10
+        ped.walkPhase += clampedDelta * ped.speed * 8 * animSpeedFactor
+        ped.bobPhase += clampedDelta * ped.speed * 8 * animSpeedFactor
+        ped.headBobPhase += clampedDelta * ped.speed * 6 * animSpeedFactor
+        ped.handPhase += clampedDelta * ped.speed * 10 * animSpeedFactor
 
-        const legSwing = Math.sin(ped.walkPhase) * 0.5
-        const armSwing = Math.sin(ped.walkPhase + Math.PI) * 0.4
-        const kneeBend = Math.max(0, Math.sin(ped.walkPhase)) * 0.3
-        const elbowBend = Math.max(0, Math.sin(ped.walkPhase + Math.PI)) * 0.25
-        const bodyBob = Math.abs(Math.sin(ped.walkPhase)) * 0.03
-        const hipSway = Math.sin(ped.walkPhase * 2) * 0.02
-        const shoulderSway = Math.sin(ped.walkPhase * 2 + Math.PI) * 0.015
-        const headBob = Math.sin(ped.headBobPhase) * 0.015
-        const headTilt = Math.sin(ped.walkPhase * 0.5) * 0.03
+        const legSwing = Math.sin(ped.walkPhase) * 0.6 * speedFactor
+        const armSwing = Math.sin(ped.walkPhase + Math.PI) * 0.5 * speedFactor
+        const kneeBend = Math.max(0, Math.sin(ped.walkPhase)) * 0.4 * speedFactor
+        const elbowBend = Math.max(0, Math.sin(ped.walkPhase + Math.PI)) * 0.3 * speedFactor
+        const bodyBob = Math.abs(Math.sin(ped.walkPhase)) * 0.04 * speedFactor
+        const hipSway = Math.sin(ped.walkPhase * 2) * 0.025 * speedFactor
+        const shoulderSway = Math.sin(ped.walkPhase * 2 + Math.PI) * 0.02 * speedFactor
+        const headBob = Math.sin(ped.headBobPhase) * 0.02 * speedFactor
+        const headTilt = Math.sin(ped.walkPhase * 0.5) * 0.04 * speedFactor
+        const torsoLean = Math.sin(ped.walkPhase) * 0.03 * speedFactor
+
+        if (isWaiting) {
+          const lookAtCar = Math.sin(elapsed * 2) * 0.1
+          if (ped.head) {
+            ped.head.rotation.y = lookAtCar
+          }
+          if (ped.neck) {
+            ped.neck.rotation.y = lookAtCar * 0.5
+          }
+          const waitShift = Math.sin(elapsed * 1.5) * 0.02
+          if (ped.torso) {
+            ped.torso.position.y = 0.275 + waitShift
+          }
+        } else {
+          const targetAngle = ped.direction === 1
+            ? Math.atan2(tangent.x, tangent.z)
+            : Math.atan2(tangent.x, tangent.z) + Math.PI
+          ped.group.rotation.y = this._lerpAngle(ped.group.rotation.y, targetAngle, Math.min(1, clampedDelta * 8))
+        }
 
         if (ped.leftLeg) {
           ped.leftLeg.rotation.x = legSwing
@@ -934,10 +956,12 @@ export class PedestrianBuilder {
           ped.rightLeg.position.z = -hipSway * 0.5
         }
         if (ped.leftCalf) {
-          ped.leftCalf.rotation.x = -kneeBend * Math.sign(legSwing + 0.01)
+          const leftKneeBend = Math.max(0, Math.sin(ped.walkPhase + 0.5)) * 0.5 * speedFactor
+          ped.leftCalf.rotation.x = -leftKneeBend
         }
         if (ped.rightCalf) {
-          ped.rightCalf.rotation.x = kneeBend * Math.sign(-legSwing + 0.01)
+          const rightKneeBend = Math.max(0, Math.sin(ped.walkPhase - 0.5 + Math.PI)) * 0.5 * speedFactor
+          ped.rightCalf.rotation.x = -rightKneeBend
         }
         if (ped.leftArm) {
           ped.leftArm.rotation.x = armSwing
@@ -948,28 +972,32 @@ export class PedestrianBuilder {
           ped.rightArm.position.z = -shoulderSway
         }
         if (ped.leftForearm) {
-          ped.leftForearm.rotation.x = elbowBend + 0.1
+          const leftElbowBend = Math.max(0, Math.sin(ped.walkPhase + Math.PI + 0.3)) * 0.6 * speedFactor
+          ped.leftForearm.rotation.x = leftElbowBend + 0.15
         }
         if (ped.rightForearm) {
-          ped.rightForearm.rotation.x = elbowBend + 0.1
+          const rightElbowBend = Math.max(0, Math.sin(ped.walkPhase + 0.3)) * 0.6 * speedFactor
+          ped.rightForearm.rotation.x = rightElbowBend + 0.15
         }
         if (ped.leftFoot) {
-          const footLift = Math.max(0, Math.sin(ped.walkPhase + Math.PI / 2)) * 0.08
+          const footLift = Math.max(0, Math.sin(ped.walkPhase + Math.PI / 2)) * 0.12 * speedFactor
           ped.leftFoot.position.y = -0.25 + footLift
           ped.leftFoot.rotation.x = legSwing * 0.3
         }
         if (ped.rightFoot) {
-          const footLift = Math.max(0, Math.sin(ped.walkPhase - Math.PI / 2)) * 0.08
+          const footLift = Math.max(0, Math.sin(ped.walkPhase - Math.PI / 2)) * 0.12 * speedFactor
           ped.rightFoot.position.y = -0.25 + footLift
           ped.rightFoot.rotation.x = -legSwing * 0.3
         }
         if (ped.torso) {
-          ped.torso.position.y = 0.28 + bodyBob
+          ped.torso.position.y = 0.275 + bodyBob
           ped.torso.rotation.z = hipSway * 0.3
+          ped.torso.rotation.x = torsoLean
         }
         if (ped.head) {
           ped.head.position.y = 0.08 + headBob
           ped.head.rotation.z = headTilt
+          ped.head.rotation.x = -torsoLean * 0.5
         }
         if (ped.neck) {
           ped.neck.rotation.z = headTilt * 0.5
@@ -982,7 +1010,7 @@ export class PedestrianBuilder {
         const idleHeadTurn = Math.sin(elapsed * 0.8 + ped.bobPhase) * 0.05
 
         if (ped.torso) {
-          ped.torso.position.y = 0.28 + idleBreath
+          ped.torso.position.y = 0.275 + idleBreath
         }
         if (ped.head) {
           ped.head.rotation.y = idleHeadTurn
