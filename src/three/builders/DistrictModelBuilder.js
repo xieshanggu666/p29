@@ -7,13 +7,14 @@ import { LandscapeBuilder } from './LandscapeBuilder.js'
 import { AnimalBuilder } from './AnimalBuilder.js'
 
 export class DistrictModelBuilder {
-  constructor(scene) {
+  constructor(scene, camera) {
     this.scene = scene
+    this.camera = camera
     this.buildingBuilder = new BuildingBuilder(scene)
     this.roadBuilder = new RoadBuilder(scene)
     this.greeneryBuilder = new GreeneryBuilder(scene)
     this.stallBuilder = new StallBuilder(scene)
-    this.vehicleBuilder = new VehicleBuilder(scene)
+    this.vehicleBuilder = new VehicleBuilder(scene, camera)
     this.landscapeBuilder = new LandscapeBuilder(scene)
     this.animalBuilder = new AnimalBuilder(scene)
   }
